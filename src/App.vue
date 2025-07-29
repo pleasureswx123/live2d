@@ -28,7 +28,8 @@ const modelConfigs = {
       { name: '表情6', file: '6.exp3.json', index: 5 },
       { name: '表情7', file: '7.exp3.json', index: 6 },
       { name: '表情8', file: '8.exp3.json', index: 7 }
-    ]
+    ],
+    sounds: []
   },
   lanhei: {
     name: '蓝黑',
@@ -48,17 +49,18 @@ const modelConfigs = {
       { name: '生气', file: 'shengqi.exp3.json', index: 8 },
       { name: '手表', file: 'shoubiao.exp3.json', index: 9 },
       { name: '星星', file: 'xingxing.exp3.json', index: 10 }
-    ]
+    ],
+    sounds: []
   },
   hibiki: {
     name: 'Hibiki',
     path: '/models/hibiki/hibiki.model3.json',
     motions: [
-      { name: '动作1', file: 'hibiki_01.motion3.json' },
-      { name: '动作2', file: 'hibiki_02.motion3.json' },
-      { name: '动作3', file: 'hibiki_03.motion3.json' },
-      { name: '动作4', file: 'hibiki_04.motion3.json' },
-      { name: '动作5', file: 'hibiki_05.motion3.json' }
+      { name: '动作1', file: 'hibiki_01.motion3.json', sound: 'sounds/hibiki_01.wav' },
+      { name: '动作2', file: 'hibiki_02.motion3.json', sound: 'sounds/hibiki_02.wav' },
+      { name: '动作3', file: 'hibiki_03.motion3.json', sound: 'sounds/hibiki_03.wav' },
+      { name: '动作4', file: 'hibiki_04.motion3.json', sound: 'sounds/hibiki_04.wav' },
+      { name: '动作5', file: 'hibiki_05.motion3.json', sound: 'sounds/hibiki_05.wav' }
     ],
     expressions: [
       { name: '普通', file: 'Normal.exp3.json', index: 0 },
@@ -67,6 +69,13 @@ const modelConfigs = {
       { name: '悲伤', file: 'Sad.exp3.json', index: 3 },
       { name: '惊讶', file: 'Surprised.exp3.json', index: 4 },
       { name: '特殊', file: 'f01.exp3.json', index: 5 }
+    ],
+    sounds: [
+      { name: '动作1音频', file: 'sounds/hibiki_01.wav' },
+      { name: '动作2音频', file: 'sounds/hibiki_02.wav' },
+      { name: '动作3音频', file: 'sounds/hibiki_03.wav' },
+      { name: '动作4音频', file: 'sounds/hibiki_04.wav' },
+      { name: '动作5音频', file: 'sounds/hibiki_05.wav' }
     ]
   },
   hiyori: {
@@ -82,7 +91,8 @@ const modelConfigs = {
       { name: '动作7', file: 'hiyori_m07.motion3.json' },
       { name: '动作8', file: 'hiyori_m08.motion3.json' }
     ],
-    expressions: [] // 该模型没有表情文件
+    expressions: [],
+    sounds: []
   },
   mark: {
     name: 'Mark',
@@ -95,7 +105,8 @@ const modelConfigs = {
       { name: '动作5', file: 'mark_m05.motion3.json' },
       { name: '动作6', file: 'mark_m06.motion3.json' }
     ],
-    expressions: [] // 该模型没有表情文件
+    expressions: [],
+    sounds: []
   },
   natori: {
     name: 'Natori',
@@ -122,6 +133,41 @@ const modelConfigs = {
       { name: '表情3', file: 'exp_03.exp3.json', index: 8 },
       { name: '表情4', file: 'exp_04.exp3.json', index: 9 },
       { name: '表情5', file: 'exp_05.exp3.json', index: 10 }
+    ],
+    sounds: []
+  },
+  kei_basic: {
+    name: 'Kei Basic',
+    path: '/models/kei_basic/kei_basic_free.model3.json',
+    motions: [
+      { name: '英语', file: '01_kei_en.motion3.json', sound: 'sounds/01_kei_en.wav' },
+      { name: '日语', file: '01_kei_jp.motion3.json', sound: 'sounds/01_kei_jp.wav' },
+      { name: '韩语', file: '01_kei_ko.motion3.json', sound: 'sounds/01_kei_ko.wav' },
+      { name: '中文', file: '01_kei_zh.motion3.json', sound: 'sounds/01_kei_zh.wav' }
+    ],
+    expressions: [],
+    sounds: [
+      { name: '英语音频', file: 'sounds/01_kei_en.wav' },
+      { name: '日语音频', file: 'sounds/01_kei_jp.wav' },
+      { name: '韩语音频', file: 'sounds/01_kei_ko.wav' },
+      { name: '中文音频', file: 'sounds/01_kei_zh.wav' }
+    ]
+  },
+  kei_vowels: {
+    name: 'Kei Vowels Pro',
+    path: '/models/kei_vowels/kei_vowels_pro.model3.json',
+    motions: [
+      { name: '英语', file: '01_kei_en.motion3.json', sound: 'sounds/01_kei_en.wav' },
+      { name: '日语', file: '01_kei_jp.motion3.json', sound: 'sounds/01_kei_jp.wav' },
+      { name: '韩语', file: '01_kei_ko.motion3.json', sound: 'sounds/01_kei_ko.wav' },
+      { name: '中文', file: '01_kei_zh.motion3.json', sound: 'sounds/01_kei_zh.wav' }
+    ],
+    expressions: [],
+    sounds: [
+      { name: '英语音频', file: 'sounds/01_kei_en.wav' },
+      { name: '日语音频', file: 'sounds/01_kei_jp.wav' },
+      { name: '韩语音频', file: 'sounds/01_kei_ko.wav' },
+      { name: '中文音频', file: 'sounds/01_kei_zh.wav' }
     ]
   }
 }
@@ -132,6 +178,21 @@ const currentConfig = computed(() => modelConfigs[currentModelName.value])
 // 选中的动作和表情
 const selectedMotion = ref('')
 const selectedExpression = ref('')
+
+// 音频相关状态
+const selectedSound = ref('')
+const currentAudio = ref(null)
+const isPlaying = ref(false)
+const isPaused = ref(false)
+const audioVolume = ref(0.7)
+const audioProgress = ref(0)
+const audioDuration = ref(0)
+const audioCurrentTime = ref(0)
+
+// 计算属性：当前模型是否支持音频
+const hasAudioSupport = computed(() => {
+  return currentConfig.value.sounds && currentConfig.value.sounds.length > 0
+})
 
 onMounted(async () => {
   try {
@@ -246,7 +307,9 @@ function getDefaultScale(modelName) {
     'hibiki': 0.15,
     'hiyori': 0.18,
     'mark': 0.16,
-    'natori': 0.14
+    'natori': 0.14,
+    'kei_basic': 0.20,
+    'kei_vowels': 0.20
   }
   return defaultScales[modelName] || 0.1
 }
@@ -288,6 +351,12 @@ function autoFitModel(model, canvasWidth, canvasHeight) {
             break
           case 'natori':
             offsetY = -scaledBounds.height * 0.08 // natori 模型稍微向下
+            break
+          case 'kei_basic':
+            offsetY = scaledBounds.height * 0.04 // kei_basic 模型稍微向上
+            break
+          case 'kei_vowels':
+            offsetY = scaledBounds.height * 0.04 // kei_vowels 模型稍微向上
             break
           default:
             offsetY = 0 // 默认居中
@@ -344,6 +413,10 @@ async function loadModel(modelName) {
     // 重置选择
     selectedMotion.value = ''
     selectedExpression.value = ''
+    selectedSound.value = ''
+
+    // 停止当前音频
+    stopAudio()
 
     isModelLoaded.value = true
     console.log(`模型 ${config.name} 设置完成`)
@@ -372,6 +445,14 @@ function playMotion() {
   try {
     console.log(`播放动作: ${selectedMotion.value}`)
     model.motion(selectedMotion.value)
+
+    // 如果动作有对应的音频，自动播放
+    const motions = currentConfig.value.motions
+    const selectedMotionData = motions.find(motion => motion.file === selectedMotion.value)
+    if (selectedMotionData && selectedMotionData.sound) {
+      playAudioFile(selectedMotionData.sound)
+    }
+
     console.log('动作播放成功')
   } catch (error) {
     console.error('播放动作失败:', error)
@@ -394,6 +475,12 @@ function playRandomMotion() {
   try {
     console.log(`播放随机动作: ${randomMotion.name}`)
     model.motion(randomMotion.file)
+
+    // 如果动作有对应的音频，自动播放
+    if (randomMotion.sound) {
+      playAudioFile(randomMotion.sound)
+    }
+
     console.log('动作播放成功')
   } catch (error) {
     console.error('播放动作失败:', error)
@@ -503,6 +590,140 @@ function refitModel() {
     console.error('重新调整模型失败:', error)
   }
 }
+
+// ==================== 音频控制函数 ====================
+
+// 播放指定音频文件
+function playAudioFile(soundPath) {
+  try {
+    // 停止当前音频
+    stopAudio()
+
+    // 创建新的音频对象
+    const audioPath = `/models/${currentModelName.value}/${soundPath}`
+    console.log(`播放音频: ${audioPath}`)
+
+    currentAudio.value = new Audio(audioPath)
+    currentAudio.value.volume = audioVolume.value
+
+    // 设置音频事件监听器
+    setupAudioEventListeners()
+
+    // 播放音频
+    currentAudio.value.play()
+    isPlaying.value = true
+    isPaused.value = false
+
+    console.log('音频播放成功')
+  } catch (error) {
+    console.error('播放音频失败:', error)
+  }
+}
+
+// 播放选中的音频
+function playSelectedAudio() {
+  if (!selectedSound.value) {
+    console.warn('未选择音频文件')
+    return
+  }
+
+  playAudioFile(selectedSound.value)
+}
+
+// 暂停音频
+function pauseAudio() {
+  if (currentAudio.value && isPlaying.value) {
+    currentAudio.value.pause()
+    isPlaying.value = false
+    isPaused.value = true
+    console.log('音频已暂停')
+  }
+}
+
+// 恢复播放音频
+function resumeAudio() {
+  if (currentAudio.value && isPaused.value) {
+    currentAudio.value.play()
+    isPlaying.value = true
+    isPaused.value = false
+    console.log('音频已恢复播放')
+  }
+}
+
+// 停止音频
+function stopAudio() {
+  if (currentAudio.value) {
+    currentAudio.value.pause()
+    currentAudio.value.currentTime = 0
+    isPlaying.value = false
+    isPaused.value = false
+    audioProgress.value = 0
+    audioCurrentTime.value = 0
+    console.log('音频已停止')
+  }
+}
+
+// 设置音频音量
+function setVolume(volume) {
+  audioVolume.value = volume
+  if (currentAudio.value) {
+    currentAudio.value.volume = volume
+  }
+}
+
+// 设置音频播放位置
+function seekAudio(progress) {
+  if (currentAudio.value && audioDuration.value > 0) {
+    const newTime = (progress / 100) * audioDuration.value
+    currentAudio.value.currentTime = newTime
+    audioProgress.value = progress
+    audioCurrentTime.value = newTime
+  }
+}
+
+// 设置音频事件监听器
+function setupAudioEventListeners() {
+  if (!currentAudio.value) return
+
+  // 音频加载完成
+  currentAudio.value.addEventListener('loadedmetadata', () => {
+    audioDuration.value = currentAudio.value.duration
+  })
+
+  // 音频播放进度更新
+  currentAudio.value.addEventListener('timeupdate', () => {
+    if (currentAudio.value) {
+      audioCurrentTime.value = currentAudio.value.currentTime
+      if (audioDuration.value > 0) {
+        audioProgress.value = (currentAudio.value.currentTime / audioDuration.value) * 100
+      }
+    }
+  })
+
+  // 音频播放结束
+  currentAudio.value.addEventListener('ended', () => {
+    isPlaying.value = false
+    isPaused.value = false
+    audioProgress.value = 0
+    audioCurrentTime.value = 0
+    console.log('音频播放完成')
+  })
+
+  // 音频播放错误
+  currentAudio.value.addEventListener('error', (e) => {
+    console.error('音频播放错误:', e)
+    isPlaying.value = false
+    isPaused.value = false
+  })
+}
+
+// 格式化时间显示
+function formatTime(seconds) {
+  if (isNaN(seconds)) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
 </script>
 
 <template>
@@ -524,6 +745,8 @@ function refitModel() {
           <option value="hiyori">{{ modelConfigs.hiyori.name }}</option>
           <option value="mark">{{ modelConfigs.mark.name }}</option>
           <option value="natori">{{ modelConfigs.natori.name }}</option>
+          <option value="kei_basic">{{ modelConfigs.kei_basic.name }}</option>
+          <option value="kei_vowels">{{ modelConfigs.kei_vowels.name }}</option>
         </select>
         <span v-if="!isModelLoaded" style="color: #666; font-size: 14px;">加载中...</span>
         <span v-else style="color: #28a745; font-size: 14px;">✓ 已加载</span>
@@ -541,7 +764,7 @@ function refitModel() {
     </div>
 
     <!-- 控制面板 -->
-    <div class="control-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="control-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
       <!-- 动作控制 -->
       <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
         <h4 style="margin: 0 0 15px 0; color: #333;">动作控制</h4>
@@ -635,6 +858,104 @@ function refitModel() {
           </button>
         </div>
       </div>
+
+      <!-- 音频控制 -->
+      <div v-if="hasAudioSupport" style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+        <h4 style="margin: 0 0 15px 0; color: #333;">音频控制</h4>
+
+        <div style="margin-bottom: 15px;">
+          <label for="soundSelect" style="display: block; margin-bottom: 5px; font-weight: bold;">选择音频:</label>
+          <select
+            id="soundSelect"
+            v-model="selectedSound"
+            :disabled="!isModelLoaded"
+            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+          >
+            <option value="">-- 请选择音频 --</option>
+            <option
+              v-for="sound in currentConfig.sounds"
+              :key="sound.file"
+              :value="sound.file"
+            >
+              {{ sound.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- 播放控制按钮 -->
+        <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+          <button
+            @click="playSelectedAudio"
+            :disabled="!isModelLoaded || !selectedSound"
+            style="flex: 1; padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+            :style="{ opacity: (!isModelLoaded || !selectedSound) ? 0.5 : 1 }"
+          >
+            ▶️ 播放
+          </button>
+          <button
+            @click="isPaused ? resumeAudio() : pauseAudio()"
+            :disabled="!isModelLoaded || !currentAudio"
+            style="flex: 1; padding: 6px 12px; background-color: #ffc107; color: #212529; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+            :style="{ opacity: (!isModelLoaded || !currentAudio) ? 0.5 : 1 }"
+          >
+            {{ isPaused ? '▶️ 继续' : '⏸️ 暂停' }}
+          </button>
+          <button
+            @click="stopAudio"
+            :disabled="!isModelLoaded || !currentAudio"
+            style="flex: 1; padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+            :style="{ opacity: (!isModelLoaded || !currentAudio) ? 0.5 : 1 }"
+          >
+            ⏹️ 停止
+          </button>
+        </div>
+
+        <!-- 音量控制 -->
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px;">
+            音量: {{ Math.round(audioVolume * 100) }}%
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            v-model="audioVolume"
+            @input="setVolume(audioVolume)"
+            style="width: 100%;"
+          />
+        </div>
+
+        <!-- 播放进度 -->
+        <div v-if="currentAudio" style="margin-bottom: 10px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px;">
+            进度: {{ formatTime(audioCurrentTime) }} / {{ formatTime(audioDuration) }}
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            v-model="audioProgress"
+            @input="seekAudio(audioProgress)"
+            style="width: 100%;"
+          />
+        </div>
+
+        <!-- 播放状态 -->
+        <div style="text-align: center; font-size: 12px; color: #666;">
+          <span v-if="isPlaying" style="color: #28a745;">🎵 正在播放</span>
+          <span v-else-if="isPaused" style="color: #ffc107;">⏸️ 已暂停</span>
+          <span v-else style="color: #6c757d;">⏹️ 已停止</span>
+        </div>
+      </div>
+
+      <!-- 无音频支持时的占位 -->
+      <div v-else style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f8f9fa; opacity: 0.6;">
+        <h4 style="margin: 0 0 15px 0; color: #6c757d;">音频控制</h4>
+        <p style="margin: 0; color: #6c757d; font-size: 14px; text-align: center;">
+          当前模型不支持音频功能
+        </p>
+      </div>
     </div>
 
     <!-- 额外控制按钮 -->
@@ -656,9 +977,11 @@ function refitModel() {
         <div><strong>当前模型:</strong> {{ currentConfig.name }}</div>
         <div><strong>动作数量:</strong> {{ currentConfig.motions.length }}</div>
         <div><strong>表情数量:</strong> {{ currentConfig.expressions.length }}</div>
+        <div><strong>音频数量:</strong> {{ currentConfig.sounds.length }}</div>
         <div><strong>Canvas尺寸:</strong> 640x480</div>
         <div v-if="model"><strong>模型缩放:</strong> {{ model.scale.x.toFixed(4) }}</div>
         <div v-if="model"><strong>模型位置:</strong> ({{ model.position.x.toFixed(0) }}, {{ model.position.y.toFixed(0) }})</div>
+        <div><strong>音频支持:</strong> {{ hasAudioSupport ? '✅ 是' : '❌ 否' }}</div>
       </div>
     </div>
   </div>
@@ -684,6 +1007,12 @@ select:focus {
 }
 
 /* 响应式设计 */
+@media (max-width: 1200px) {
+  .control-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
 @media (max-width: 768px) {
   .control-grid {
     grid-template-columns: 1fr !important;
