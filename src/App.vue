@@ -198,8 +198,8 @@ onMounted(async () => {
   try {
     app = new PIXI.Application({
       view: canvas.value,
-      width: 640,
-      height: 480,
+      width: 600,
+      height: 600,
       backgroundColor: 0xffffff,
       autoDensity: true,
       antialias: true,
@@ -272,7 +272,7 @@ function calculateAutoScale(model, canvasWidth, canvasHeight) {
 
     // 设置目标尺寸（留出边距）
     const targetWidth = canvasWidth * 0.75  // 使用 canvas 75% 的宽度
-    const targetHeight = canvasHeight * 0.85 // 使用 canvas 85% 的高度
+    const targetHeight = canvasHeight * 0.75 // 使用 canvas 85% 的高度
 
     // 计算缩放比例（取较小值以确保模型完全显示）
     const scaleX = targetWidth / modelWidth
@@ -758,8 +758,8 @@ function formatTime(seconds) {
       <canvas
         style="border: 2px solid #333; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
         ref="canvas"
-        width="640"
-        height="480"
+        width="600"
+        height="600"
       ></canvas>
     </div>
 
@@ -1016,11 +1016,6 @@ select:focus {
 @media (max-width: 768px) {
   .control-grid {
     grid-template-columns: 1fr !important;
-  }
-
-  canvas {
-    width: 100% !important;
-    height: auto !important;
   }
 }
 </style>
