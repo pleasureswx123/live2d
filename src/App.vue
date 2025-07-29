@@ -1,0 +1,697 @@
+<script setup>
+import * as PIXI from 'pixi.js'
+import { Live2DModel } from 'pixi-live2d-display'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+
+window.PIXI = PIXI
+const canvas = ref(null)
+const isModelLoaded = ref(false)
+const currentModelName = ref('idol')
+
+let app
+let model
+
+// 模型配置
+const modelConfigs = {
+  idol: {
+    name: '偶像',
+    path: '/models/idol/ldol.model3.json',
+    motions: [
+      { name: '姿势1', file: '1.motion3.json' }
+    ],
+    expressions: [
+      { name: '问号', file: '1.exp3.json', index: 0 },
+      { name: '生气', file: '2.exp3.json', index: 1 },
+      { name: '黑脸', file: '3.exp3.json', index: 2 },
+      { name: '表情4', file: '4.exp3.json', index: 3 },
+      { name: '表情5', file: '5.exp3.json', index: 4 },
+      { name: '表情6', file: '6.exp3.json', index: 5 },
+      { name: '表情7', file: '7.exp3.json', index: 6 },
+      { name: '表情8', file: '8.exp3.json', index: 7 }
+    ]
+  },
+  lanhei: {
+    name: '蓝黑',
+    path: '/models/lanhei/lanhei.model3.json',
+    motions: [
+      { name: '场景1', file: 'Scene1.motion3.json' }
+    ],
+    expressions: [
+      { name: '棒棒糖', file: 'bangbangtang.exp3.json', index: 0 },
+      { name: '唱歌', file: 'changge.exp3.json', index: 1 },
+      { name: '打游戏', file: 'dayouxi.exp3.json', index: 2 },
+      { name: '黑脸', file: 'heilian.exp3.json', index: 3 },
+      { name: '黑衣', file: 'heiyi.exp3.json', index: 4 },
+      { name: '哭', file: 'ku.exp3.json', index: 5 },
+      { name: '脸红', file: 'lianhong.exp3.json', index: 6 },
+      { name: '圈圈', file: 'quanquan.exp3.json', index: 7 },
+      { name: '生气', file: 'shengqi.exp3.json', index: 8 },
+      { name: '手表', file: 'shoubiao.exp3.json', index: 9 },
+      { name: '星星', file: 'xingxing.exp3.json', index: 10 }
+    ]
+  },
+  hibiki: {
+    name: 'Hibiki',
+    path: '/models/hibiki/hibiki.model3.json',
+    motions: [
+      { name: '动作1', file: 'hibiki_01.motion3.json' },
+      { name: '动作2', file: 'hibiki_02.motion3.json' },
+      { name: '动作3', file: 'hibiki_03.motion3.json' },
+      { name: '动作4', file: 'hibiki_04.motion3.json' },
+      { name: '动作5', file: 'hibiki_05.motion3.json' }
+    ],
+    expressions: [
+      { name: '普通', file: 'Normal.exp3.json', index: 0 },
+      { name: '生气', file: 'Angry.exp3.json', index: 1 },
+      { name: '脸红', file: 'Blushing.exp3.json', index: 2 },
+      { name: '悲伤', file: 'Sad.exp3.json', index: 3 },
+      { name: '惊讶', file: 'Surprised.exp3.json', index: 4 },
+      { name: '特殊', file: 'f01.exp3.json', index: 5 }
+    ]
+  },
+  hiyori: {
+    name: 'Hiyori',
+    path: '/models/hiyori/hiyori_free_t08.model3.json',
+    motions: [
+      { name: '动作1', file: 'hiyori_m01.motion3.json' },
+      { name: '动作2', file: 'hiyori_m02.motion3.json' },
+      { name: '动作3', file: 'hiyori_m03.motion3.json' },
+      { name: '动作4', file: 'hiyori_m04.motion3.json' },
+      { name: '动作5', file: 'hiyori_m05.motion3.json' },
+      { name: '动作6', file: 'hiyori_m06.motion3.json' },
+      { name: '动作7', file: 'hiyori_m07.motion3.json' },
+      { name: '动作8', file: 'hiyori_m08.motion3.json' }
+    ],
+    expressions: [] // 该模型没有表情文件
+  },
+  mark: {
+    name: 'Mark',
+    path: '/models/mark/mark_free_t04.model3.json',
+    motions: [
+      { name: '动作1', file: 'mark_m01.motion3.json' },
+      { name: '动作2', file: 'mark_m02.motion3.json' },
+      { name: '动作3', file: 'mark_m03.motion3.json' },
+      { name: '动作4', file: 'mark_m04.motion3.json' },
+      { name: '动作5', file: 'mark_m05.motion3.json' },
+      { name: '动作6', file: 'mark_m06.motion3.json' }
+    ],
+    expressions: [] // 该模型没有表情文件
+  },
+  natori: {
+    name: 'Natori',
+    path: '/models/natori/natori_pro_t06.model3.json',
+    motions: [
+      { name: '动作0', file: 'mtn_00.motion3.json' },
+      { name: '动作1', file: 'mtn_01.motion3.json' },
+      { name: '动作2', file: 'mtn_02.motion3.json' },
+      { name: '动作3', file: 'mtn_03.motion3.json' },
+      { name: '动作4', file: 'mtn_04.motion3.json' },
+      { name: '动作5', file: 'mtn_05.motion3.json' },
+      { name: '动作6', file: 'mtn_06.motion3.json' },
+      { name: '动作7', file: 'mtn_07.motion3.json' }
+    ],
+    expressions: [
+      { name: '普通', file: 'Normal.exp3.json', index: 0 },
+      { name: '生气', file: 'Angry.exp3.json', index: 1 },
+      { name: '脸红', file: 'Blushing.exp3.json', index: 2 },
+      { name: '悲伤', file: 'Sad.exp3.json', index: 3 },
+      { name: '微笑', file: 'Smile.exp3.json', index: 4 },
+      { name: '惊讶', file: 'Surprised.exp3.json', index: 5 },
+      { name: '表情1', file: 'exp_01.exp3.json', index: 6 },
+      { name: '表情2', file: 'exp_02.exp3.json', index: 7 },
+      { name: '表情3', file: 'exp_03.exp3.json', index: 8 },
+      { name: '表情4', file: 'exp_04.exp3.json', index: 9 },
+      { name: '表情5', file: 'exp_05.exp3.json', index: 10 }
+    ]
+  }
+}
+
+// 当前模型配置
+const currentConfig = computed(() => modelConfigs[currentModelName.value])
+
+// 选中的动作和表情
+const selectedMotion = ref('')
+const selectedExpression = ref('')
+
+onMounted(async () => {
+  try {
+    app = new PIXI.Application({
+      view: canvas.value,
+      width: 640,
+      height: 480,
+      backgroundColor: 0xffffff,
+      autoDensity: true,
+      antialias: true,
+      resolution: window.devicePixelRatio || 1,
+    })
+
+    // 添加模型更新循环
+    app.ticker.add(() => {
+      if (model) {
+        model.update(app.ticker.deltaMS)
+      }
+    })
+
+    // 添加窗口大小变化监听器
+    window.addEventListener('resize', handleResize)
+
+    // 加载默认模型
+    await loadModel(currentModelName.value)
+  } catch (error) {
+    console.error('应用初始化失败:', error)
+  }
+})
+
+onUnmounted(() => {
+  // 清理事件监听器
+  window.removeEventListener('resize', handleResize)
+
+  // 清理模型和应用
+  if (model) {
+    model.destroy()
+  }
+  if (app) {
+    app.destroy(true)
+  }
+})
+
+// 处理窗口大小变化
+function handleResize() {
+  if (!model || !isModelLoaded.value || !app) return
+
+  // 防抖处理，避免频繁调整
+  clearTimeout(handleResize.timeoutId)
+  handleResize.timeoutId = setTimeout(() => {
+    console.log('窗口大小变化，重新调整模型')
+    const canvasWidth = app.view.width
+    const canvasHeight = app.view.height
+    autoFitModel(model, canvasWidth, canvasHeight)
+  }, 300)
+}
+
+// 加载模型函数
+// 自动计算模型缩放比例
+function calculateAutoScale(model, canvasWidth, canvasHeight) {
+  try {
+    // 先设置一个基础缩放来获取准确的边界框
+    model.scale.set(1.0)
+
+    // 获取模型的边界框
+    const bounds = model.getBounds()
+    console.log('模型边界框:', bounds)
+
+    if (!bounds || bounds.width === 0 || bounds.height === 0) {
+      console.warn('无法获取模型边界框，使用默认缩放')
+      return getDefaultScale(currentModelName.value)
+    }
+
+    // 计算模型原始尺寸
+    const modelWidth = bounds.width
+    const modelHeight = bounds.height
+
+    // 设置目标尺寸（留出边距）
+    const targetWidth = canvasWidth * 0.75  // 使用 canvas 75% 的宽度
+    const targetHeight = canvasHeight * 0.85 // 使用 canvas 85% 的高度
+
+    // 计算缩放比例（取较小值以确保模型完全显示）
+    const scaleX = targetWidth / modelWidth
+    const scaleY = targetHeight / modelHeight
+    const scale = Math.min(scaleX, scaleY)
+
+    console.log(`模型尺寸: ${modelWidth.toFixed(2)} x ${modelHeight.toFixed(2)}`)
+    console.log(`目标尺寸: ${targetWidth.toFixed(2)} x ${targetHeight.toFixed(2)}`)
+    console.log(`计算缩放: scaleX=${scaleX.toFixed(4)}, scaleY=${scaleY.toFixed(4)}, 最终=${scale.toFixed(4)}`)
+
+    // 限制缩放范围，避免过大或过小
+    const finalScale = Math.max(0.01, Math.min(1.5, scale))
+
+    // 如果计算出的缩放过小，使用默认值
+    if (finalScale < 0.02) {
+      console.warn('计算出的缩放过小，使用默认缩放')
+      return getDefaultScale(currentModelName.value)
+    }
+
+    return finalScale
+  } catch (error) {
+    console.error('计算自动缩放失败:', error)
+    return getDefaultScale(currentModelName.value)
+  }
+}
+
+// 获取模型的默认缩放值
+function getDefaultScale(modelName) {
+  const defaultScales = {
+    'idol': 0.08,
+    'lanhei': 0.12,
+    'hibiki': 0.15,
+    'hiyori': 0.18,
+    'mark': 0.16,
+    'natori': 0.14
+  }
+  return defaultScales[modelName] || 0.1
+}
+
+// 自动调整模型位置和缩放
+function autoFitModel(model, canvasWidth, canvasHeight) {
+  try {
+    // 计算自动缩放
+    const autoScale = calculateAutoScale(model, canvasWidth, canvasHeight)
+    model.scale.set(autoScale)
+
+    // 等待一帧以确保缩放生效
+    requestAnimationFrame(() => {
+      try {
+        // 重新获取缩放后的边界框
+        const scaledBounds = model.getBounds()
+
+        // 计算居中位置
+        const centerX = canvasWidth / 2
+        const centerY = canvasHeight / 2
+
+        // 根据模型类型调整位置偏移
+        let offsetY = 0
+        switch (currentModelName.value) {
+          case 'idol':
+            offsetY = scaledBounds.height * 0.05 // idol 模型稍微向上
+            break
+          case 'lanhei':
+            offsetY = -scaledBounds.height * 0.1 // lanhei 模型稍微向下
+            break
+          case 'hibiki':
+            offsetY = scaledBounds.height * 0.02 // hibiki 模型稍微向上
+            break
+          case 'hiyori':
+            offsetY = -scaledBounds.height * 0.05 // hiyori 模型稍微向下
+            break
+          case 'mark':
+            offsetY = scaledBounds.height * 0.03 // mark 模型稍微向上
+            break
+          case 'natori':
+            offsetY = -scaledBounds.height * 0.08 // natori 模型稍微向下
+            break
+          default:
+            offsetY = 0 // 默认居中
+        }
+
+        // 设置模型位置
+        model.position.set(
+          centerX - scaledBounds.width / 2,
+          centerY - scaledBounds.height / 2 + offsetY
+        )
+
+        console.log(`模型自动调整完成: scale=${autoScale.toFixed(4)}, position=(${model.position.x.toFixed(2)}, ${model.position.y.toFixed(2)})`)
+        console.log(`缩放后边界框: width=${scaledBounds.width.toFixed(2)}, height=${scaledBounds.height.toFixed(2)}`)
+      } catch (error) {
+        console.error('设置模型位置失败:', error)
+        // 使用简单的居中方案
+        model.position.set(canvasWidth / 2, canvasHeight / 2)
+      }
+    })
+  } catch (error) {
+    console.error('自动调整模型失败:', error)
+    // 使用备用方案
+    const defaultScale = getDefaultScale(currentModelName.value)
+    model.scale.set(defaultScale)
+    model.position.set(canvasWidth / 2, canvasHeight / 2)
+  }
+}
+
+async function loadModel(modelName) {
+  try {
+    isModelLoaded.value = false
+
+    // 移除旧模型
+    if (model) {
+      app.stage.removeChild(model)
+      model.destroy()
+    }
+
+    console.log(`开始加载模型: ${modelName}`)
+    const config = modelConfigs[modelName]
+    model = await Live2DModel.from(config.path)
+    console.log('模型加载成功:', model)
+
+    app.stage.addChild(model)
+
+    // 等待一帧以确保模型完全渲染
+    await new Promise(resolve => requestAnimationFrame(resolve))
+
+    // 自动调整模型缩放和位置
+    const canvasWidth = app.view.width
+    const canvasHeight = app.view.height
+    autoFitModel(model, canvasWidth, canvasHeight)
+
+    // 重置选择
+    selectedMotion.value = ''
+    selectedExpression.value = ''
+
+    isModelLoaded.value = true
+    console.log(`模型 ${config.name} 设置完成`)
+  } catch (error) {
+    console.error('模型加载失败:', error)
+    isModelLoaded.value = false
+  }
+}
+
+const randomInt = (min, max) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+// 切换模型
+async function changeModel() {
+  await loadModel(currentModelName.value)
+}
+
+// 播放指定动作
+function playMotion() {
+  if (!model || !isModelLoaded.value || !selectedMotion.value) {
+    console.warn('模型未加载或未选择动作')
+    return
+  }
+
+  try {
+    console.log(`播放动作: ${selectedMotion.value}`)
+    model.motion(selectedMotion.value)
+    console.log('动作播放成功')
+  } catch (error) {
+    console.error('播放动作失败:', error)
+  }
+}
+
+// 播放随机动作
+function playRandomMotion() {
+  if (!model || !isModelLoaded.value) {
+    console.warn('模型还未加载完成')
+    return
+  }
+
+  const motions = currentConfig.value.motions
+  if (motions.length === 0) return
+
+  const randomMotion = motions[randomInt(0, motions.length - 1)]
+  selectedMotion.value = randomMotion.file
+
+  try {
+    console.log(`播放随机动作: ${randomMotion.name}`)
+    model.motion(randomMotion.file)
+    console.log('动作播放成功')
+  } catch (error) {
+    console.error('播放动作失败:', error)
+  }
+}
+
+// 播放指定表情
+function playExpression() {
+  if (!model || !isModelLoaded.value || !selectedExpression.value) {
+    console.warn('模型未加载或未选择表情')
+    return
+  }
+
+  const expressions = currentConfig.value.expressions
+  const selectedExp = expressions.find(exp => exp.file === selectedExpression.value)
+
+  if (!selectedExp) {
+    console.warn('未找到选中的表情')
+    return
+  }
+
+  try {
+    console.log(`播放表情: ${selectedExp.name} (${selectedExp.file})`)
+
+    // 优先使用索引方式
+    if (selectedExp.index !== undefined) {
+      model.expression(selectedExp.index)
+    } else {
+      // 备用文件名方式
+      model.expression(selectedExp.file)
+    }
+
+    console.log('表情切换成功')
+  } catch (error) {
+    console.error('表情切换失败:', error)
+  }
+}
+
+// 播放随机表情
+function playRandomExpression() {
+  if (!model || !isModelLoaded.value) {
+    console.warn('模型还未加载完成')
+    return
+  }
+
+  const expressions = currentConfig.value.expressions
+  if (expressions.length === 0) return
+
+  const randomExp = expressions[randomInt(0, expressions.length - 1)]
+  selectedExpression.value = randomExp.file
+
+  try {
+    console.log(`播放随机表情: ${randomExp.name}`)
+
+    // 优先使用索引方式
+    if (randomExp.index !== undefined) {
+      model.expression(randomExp.index)
+    } else {
+      // 备用文件名方式
+      model.expression(randomExp.file)
+    }
+
+    console.log('表情切换成功')
+  } catch (error) {
+    console.error('表情切换失败:', error)
+  }
+}
+
+// 添加重置表情的函数
+function resetExpression() {
+  if (!model || !isModelLoaded.value) {
+    console.warn('模型还未加载完成')
+    return
+  }
+
+  try {
+    console.log('重置表情到默认状态')
+    // 根据官方文档，调用内部表情管理器的重置方法
+    model.internalModel.motionManager.expressionManager.setRandomExpression()
+    console.log('表情重置成功')
+  } catch (error) {
+    console.error('表情重置失败:', error)
+
+    // 备用方法
+    try {
+      model.expression() // 随机表情作为备用
+    } catch (error2) {
+      console.error('备用重置方法也失败:', error2)
+    }
+  }
+}
+
+// 手动重新调整模型大小和位置
+function refitModel() {
+  if (!model || !isModelLoaded.value || !app) {
+    console.warn('模型未加载或应用未初始化')
+    return
+  }
+
+  try {
+    console.log('手动重新调整模型')
+    const canvasWidth = app.view.width
+    const canvasHeight = app.view.height
+    autoFitModel(model, canvasWidth, canvasHeight)
+    console.log('模型重新调整完成')
+  } catch (error) {
+    console.error('重新调整模型失败:', error)
+  }
+}
+</script>
+
+<template>
+  <div style="padding: 20px; font-family: Arial, sans-serif;">
+    <!-- 模型选择区域 -->
+    <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+      <h3 style="margin: 0 0 10px 0; color: #333;">模型选择</h3>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label for="modelSelect" style="font-weight: bold;">选择模型:</label>
+        <select
+          id="modelSelect"
+          v-model="currentModelName"
+          @change="changeModel"
+          style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px;"
+        >
+          <option value="idol">{{ modelConfigs.idol.name }}</option>
+          <option value="lanhei">{{ modelConfigs.lanhei.name }}</option>
+          <option value="hibiki">{{ modelConfigs.hibiki.name }}</option>
+          <option value="hiyori">{{ modelConfigs.hiyori.name }}</option>
+          <option value="mark">{{ modelConfigs.mark.name }}</option>
+          <option value="natori">{{ modelConfigs.natori.name }}</option>
+        </select>
+        <span v-if="!isModelLoaded" style="color: #666; font-size: 14px;">加载中...</span>
+        <span v-else style="color: #28a745; font-size: 14px;">✓ 已加载</span>
+      </div>
+    </div>
+
+    <!-- Live2D 画布 -->
+    <div style="text-align: center; margin-bottom: 20px;">
+      <canvas
+        style="border: 2px solid #333; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+        ref="canvas"
+        width="640"
+        height="480"
+      ></canvas>
+    </div>
+
+    <!-- 控制面板 -->
+    <div class="control-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <!-- 动作控制 -->
+      <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+        <h4 style="margin: 0 0 15px 0; color: #333;">动作控制</h4>
+
+        <div style="margin-bottom: 10px;">
+          <label for="motionSelect" style="display: block; margin-bottom: 5px; font-weight: bold;">选择动作:</label>
+          <select
+            id="motionSelect"
+            v-model="selectedMotion"
+            :disabled="!isModelLoaded"
+            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+          >
+            <option value="">-- 请选择动作 --</option>
+            <option
+              v-for="motion in currentConfig.motions"
+              :key="motion.file"
+              :value="motion.file"
+            >
+              {{ motion.name }}
+            </option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button
+            @click="playMotion"
+            :disabled="!isModelLoaded || !selectedMotion"
+            style="flex: 1; padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+            :style="{ opacity: (!isModelLoaded || !selectedMotion) ? 0.5 : 1 }"
+          >
+            播放动作
+          </button>
+          <button
+            @click="playRandomMotion"
+            :disabled="!isModelLoaded"
+            style="flex: 1; padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;"
+            :style="{ opacity: !isModelLoaded ? 0.5 : 1 }"
+          >
+            随机动作
+          </button>
+        </div>
+      </div>
+
+      <!-- 表情控制 -->
+      <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+        <h4 style="margin: 0 0 15px 0; color: #333;">表情控制</h4>
+
+        <div style="margin-bottom: 10px;">
+          <label for="expressionSelect" style="display: block; margin-bottom: 5px; font-weight: bold;">选择表情:</label>
+          <select
+            id="expressionSelect"
+            v-model="selectedExpression"
+            :disabled="!isModelLoaded"
+            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+          >
+            <option value="">-- 请选择表情 --</option>
+            <option
+              v-for="expression in currentConfig.expressions"
+              :key="expression.file"
+              :value="expression.file"
+            >
+              {{ expression.name }}
+            </option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button
+            @click="playExpression"
+            :disabled="!isModelLoaded || !selectedExpression"
+            style="flex: 1; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;"
+            :style="{ opacity: (!isModelLoaded || !selectedExpression) ? 0.5 : 1 }"
+          >
+            播放表情
+          </button>
+          <button
+            @click="playRandomExpression"
+            :disabled="!isModelLoaded"
+            style="flex: 1; padding: 8px 16px; background-color: #ffc107; color: #212529; border: none; border-radius: 4px; cursor: pointer;"
+            :style="{ opacity: !isModelLoaded ? 0.5 : 1 }"
+          >
+            随机表情
+          </button>
+          <button
+            @click="resetExpression"
+            :disabled="!isModelLoaded"
+            style="flex: 1; padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;"
+            :style="{ opacity: !isModelLoaded ? 0.5 : 1 }"
+          >
+            重置表情
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 额外控制按钮 -->
+    <div v-if="isModelLoaded" style="margin-top: 20px; text-align: center;">
+      <button
+        @click="refitModel"
+        style="padding: 8px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;"
+      >
+        🔄 重新调整模型大小
+      </button>
+      <span style="font-size: 12px; color: #666;">
+        如果模型显示异常，点击此按钮重新调整
+      </span>
+    </div>
+
+    <!-- 状态信息 -->
+    <div v-if="isModelLoaded" style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 14px;">
+        <div><strong>当前模型:</strong> {{ currentConfig.name }}</div>
+        <div><strong>动作数量:</strong> {{ currentConfig.motions.length }}</div>
+        <div><strong>表情数量:</strong> {{ currentConfig.expressions.length }}</div>
+        <div><strong>Canvas尺寸:</strong> 640x480</div>
+        <div v-if="model"><strong>模型缩放:</strong> {{ model.scale.x.toFixed(4) }}</div>
+        <div v-if="model"><strong>模型位置:</strong> ({{ model.position.x.toFixed(0) }}, {{ model.position.y.toFixed(0) }})</div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* 按钮悬停效果 */
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* 选择框样式 */
+select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .control-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+</style>

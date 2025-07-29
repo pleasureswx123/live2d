@@ -1,0 +1,1713 @@
+{
+	"Version": 3,
+	"Parameters": [
+		{
+			"Id": "Param11",
+			"GroupId": "",
+			"Name": "哭哭"
+		},
+		{
+			"Id": "Param16",
+			"GroupId": "",
+			"Name": "生气"
+		},
+		{
+			"Id": "Param17",
+			"GroupId": "",
+			"Name": "黑脸"
+		},
+		{
+			"Id": "Param22",
+			"GroupId": "",
+			"Name": "问号"
+		},
+		{
+			"Id": "Param43",
+			"GroupId": "",
+			"Name": "豆豆眼"
+		},
+		{
+			"Id": "Param55",
+			"GroupId": "",
+			"Name": "星星眼"
+		},
+		{
+			"Id": "Param44",
+			"GroupId": "",
+			"Name": "面条哭"
+		},
+		{
+			"Id": "Param56",
+			"GroupId": "",
+			"Name": "心心眼"
+		},
+		{
+			"Id": "Param54",
+			"GroupId": "",
+			"Name": "脸红"
+		},
+		{
+			"Id": "Param19",
+			"GroupId": "",
+			"Name": "姿势1"
+		},
+		{
+			"Id": "Param57",
+			"GroupId": "",
+			"Name": "cefa"
+		},
+		{
+			"Id": "ParamAngleX",
+			"GroupId": "ParamGroup2",
+			"Name": "角度 X"
+		},
+		{
+			"Id": "ParamAngleY",
+			"GroupId": "ParamGroup2",
+			"Name": "角度 Y"
+		},
+		{
+			"Id": "ParamAngleZ",
+			"GroupId": "ParamGroup2",
+			"Name": "角度 Z"
+		},
+		{
+			"Id": "ParamBodyAngleX",
+			"GroupId": "ParamGroup2",
+			"Name": "身体旋转　X"
+		},
+		{
+			"Id": "ParamBodyAngleY",
+			"GroupId": "ParamGroup2",
+			"Name": "身体旋转　Y"
+		},
+		{
+			"Id": "ParamBodyAngleZ",
+			"GroupId": "ParamGroup2",
+			"Name": "身体旋转　Z"
+		},
+		{
+			"Id": "Param42",
+			"GroupId": "ParamGroup2",
+			"Name": "参数188"
+		},
+		{
+			"Id": "ParamBreath",
+			"GroupId": "ParamGroup2",
+			"Name": "呼吸"
+		},
+		{
+			"Id": "ParamEyeLOpen",
+			"GroupId": "ParamGroup",
+			"Name": "左眼　开闭"
+		},
+		{
+			"Id": "ParamEyeLSmile",
+			"GroupId": "ParamGroup",
+			"Name": "左眼　微笑"
+		},
+		{
+			"Id": "ParamEyeROpen",
+			"GroupId": "ParamGroup",
+			"Name": "右眼　开闭"
+		},
+		{
+			"Id": "ParamEyeRSmile",
+			"GroupId": "ParamGroup",
+			"Name": "右眼  微笑"
+		},
+		{
+			"Id": "Param23",
+			"GroupId": "ParamGroup",
+			"Name": "眼珠物理"
+		},
+		{
+			"Id": "Param24",
+			"GroupId": "ParamGroup",
+			"Name": "眼珠物理y"
+		},
+		{
+			"Id": "ParamEyeBallX",
+			"GroupId": "ParamGroup",
+			"Name": "眼球 X"
+		},
+		{
+			"Id": "ParamEyeBallY",
+			"GroupId": "ParamGroup",
+			"Name": "眼球 Y"
+		},
+		{
+			"Id": "ParamBrowLY",
+			"GroupId": "ParamGroup",
+			"Name": "眉  上下"
+		},
+		{
+			"Id": "ParamBrowLForm",
+			"GroupId": "ParamGroup",
+			"Name": "眉　変形"
+		},
+		{
+			"Id": "ParamMouthForm",
+			"GroupId": "ParamGroup3",
+			"Name": "嘴部　变形"
+		},
+		{
+			"Id": "ParamMouthOpenY",
+			"GroupId": "ParamGroup3",
+			"Name": "嘴巴　张开和闭合"
+		},
+		{
+			"Id": "Param46",
+			"GroupId": "ParamGroup48",
+			"Name": "舌头TongueOut"
+		},
+		{
+			"Id": "Param20",
+			"GroupId": "ParamGroup48",
+			"Name": "歪嘴MouthX"
+		},
+		{
+			"Id": "Param53",
+			"GroupId": "ParamGroup48",
+			"Name": "生气"
+		},
+		{
+			"Id": "Param21",
+			"GroupId": "ParamGroup48",
+			"Name": "鼓脸CheeckPuff"
+		},
+		{
+			"Id": "Param48",
+			"GroupId": "ParamGroup48",
+			"Name": "撅嘴Mouthshrug"
+		},
+		{
+			"Id": "Param45",
+			"GroupId": "ParamGroup48",
+			"Name": "嘟嘴Mouthfunnel"
+		},
+		{
+			"Id": "Param47",
+			"GroupId": "ParamGroup48",
+			"Name": "用力挤嘴MouthPressLipOpen"
+		},
+		{
+			"Id": "Param49",
+			"GroupId": "ParamGroup48",
+			"Name": "嘴巴宽MouthPuckerWiden"
+		},
+		{
+			"Id": "Param50",
+			"GroupId": "ParamGroup48",
+			"Name": "下巴JawOpen"
+		},
+		{
+			"Id": "Param51",
+			"GroupId": "ParamGroup48",
+			"Name": "挤眼睛EyeSquint"
+		},
+		{
+			"Id": "Param52",
+			"GroupId": "ParamGroup48",
+			"Name": "2挤眼睛EyeSquint"
+		},
+		{
+			"Id": "Param",
+			"GroupId": "ParamGroup5",
+			"Name": "头x1"
+		},
+		{
+			"Id": "Param2",
+			"GroupId": "ParamGroup5",
+			"Name": "头y1"
+		},
+		{
+			"Id": "Param9",
+			"GroupId": "ParamGroup5",
+			"Name": "头x2"
+		},
+		{
+			"Id": "Param3",
+			"GroupId": "ParamGroup5",
+			"Name": "头y2"
+		},
+		{
+			"Id": "Param4",
+			"GroupId": "ParamGroup5",
+			"Name": "身x1"
+		},
+		{
+			"Id": "Param10",
+			"GroupId": "ParamGroup5",
+			"Name": "身y1"
+		},
+		{
+			"Id": "Param5",
+			"GroupId": "ParamGroup5",
+			"Name": "身x2"
+		},
+		{
+			"Id": "Param6",
+			"GroupId": "ParamGroup5",
+			"Name": "身y2"
+		},
+		{
+			"Id": "Param7",
+			"GroupId": "ParamGroup5",
+			"Name": "头发4"
+		},
+		{
+			"Id": "Param8",
+			"GroupId": "ParamGroup5",
+			"Name": "头发44"
+		},
+		{
+			"Id": "Param12",
+			"GroupId": "ParamGroup5",
+			"Name": "头发444"
+		},
+		{
+			"Id": "Param13",
+			"GroupId": "ParamGroup5",
+			"Name": "头发5"
+		},
+		{
+			"Id": "Param14",
+			"GroupId": "ParamGroup5",
+			"Name": "头发55"
+		},
+		{
+			"Id": "Param15",
+			"GroupId": "ParamGroup5",
+			"Name": "头发555"
+		},
+		{
+			"Id": "Param18",
+			"GroupId": "ParamGroup5",
+			"Name": "5555"
+		},
+		{
+			"Id": "Param25",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服1"
+		},
+		{
+			"Id": "Param26",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服11"
+		},
+		{
+			"Id": "Param27",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服111"
+		},
+		{
+			"Id": "Param28",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服2"
+		},
+		{
+			"Id": "Param29",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服22"
+		},
+		{
+			"Id": "Param30",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服222"
+		},
+		{
+			"Id": "Param31",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服3"
+		},
+		{
+			"Id": "Param32",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服33"
+		},
+		{
+			"Id": "Param33",
+			"GroupId": "ParamGroup13",
+			"Name": "衣服333"
+		},
+		{
+			"Id": "Param34",
+			"GroupId": "ParamGroup13",
+			"Name": "飘1"
+		},
+		{
+			"Id": "Param35",
+			"GroupId": "ParamGroup13",
+			"Name": "飘2"
+		},
+		{
+			"Id": "Param36",
+			"GroupId": "ParamGroup13",
+			"Name": "飘3"
+		},
+		{
+			"Id": "Param37",
+			"GroupId": "ParamGroup13",
+			"Name": "耳坠"
+		},
+		{
+			"Id": "Param38",
+			"GroupId": "ParamGroup13",
+			"Name": "左耳1"
+		},
+		{
+			"Id": "Param39",
+			"GroupId": "ParamGroup13",
+			"Name": "左耳2"
+		},
+		{
+			"Id": "Param40",
+			"GroupId": "ParamGroup13",
+			"Name": "右耳1"
+		},
+		{
+			"Id": "Param41",
+			"GroupId": "ParamGroup13",
+			"Name": "右耳2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh125",
+			"GroupId": "ParamGroup4",
+			"Name": "[0]图层34 的複製 20"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh125",
+			"GroupId": "ParamGroup4",
+			"Name": "[1]图层34 的複製 20"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh125",
+			"GroupId": "ParamGroup4",
+			"Name": "[2]图层34 的複製 20"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh125",
+			"GroupId": "ParamGroup4",
+			"Name": "[3]图层34 的複製 20"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh125",
+			"GroupId": "ParamGroup4",
+			"Name": "[4]图层34 的複製 20"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh127",
+			"GroupId": "ParamGroup6",
+			"Name": "[0]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh127",
+			"GroupId": "ParamGroup6",
+			"Name": "[1]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh127",
+			"GroupId": "ParamGroup6",
+			"Name": "[2]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh127",
+			"GroupId": "ParamGroup6",
+			"Name": "[3]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh127",
+			"GroupId": "ParamGroup6",
+			"Name": "[4]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh81",
+			"GroupId": "ParamGroup7",
+			"Name": "[0]图层32 的複製 8"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh81",
+			"GroupId": "ParamGroup7",
+			"Name": "[1]图层32 的複製 8"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh81",
+			"GroupId": "ParamGroup7",
+			"Name": "[2]图层32 的複製 8"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh84",
+			"GroupId": "ParamGroup8",
+			"Name": "[0]图层32 的複製 10"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh84",
+			"GroupId": "ParamGroup8",
+			"Name": "[1]图层32 的複製 10"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh84",
+			"GroupId": "ParamGroup8",
+			"Name": "[2]图层32 的複製 10"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh84",
+			"GroupId": "ParamGroup8",
+			"Name": "[3]图层32 的複製 10"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh84",
+			"GroupId": "ParamGroup8",
+			"Name": "[4]图层32 的複製 10"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh82",
+			"GroupId": "ParamGroup9",
+			"Name": "[0]图层32 的複製 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh82",
+			"GroupId": "ParamGroup9",
+			"Name": "[1]图层32 的複製 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh82",
+			"GroupId": "ParamGroup9",
+			"Name": "[2]图层32 的複製 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh85",
+			"GroupId": "ParamGroup10",
+			"Name": "[0]图层32 的複製 9"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh85",
+			"GroupId": "ParamGroup10",
+			"Name": "[1]图层32 的複製 9"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh85",
+			"GroupId": "ParamGroup10",
+			"Name": "[2]图层32 的複製 9"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh85",
+			"GroupId": "ParamGroup10",
+			"Name": "[3]图层32 的複製 9"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh85",
+			"GroupId": "ParamGroup10",
+			"Name": "[4]图层32 的複製 9"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh30",
+			"GroupId": "ParamGroup11",
+			"Name": "[0]图层18 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh30",
+			"GroupId": "ParamGroup11",
+			"Name": "[1]图层18 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh30",
+			"GroupId": "ParamGroup11",
+			"Name": "[2]图层18 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh30",
+			"GroupId": "ParamGroup11",
+			"Name": "[3]图层18 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh30",
+			"GroupId": "ParamGroup11",
+			"Name": "[4]图层18 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh29",
+			"GroupId": "ParamGroup12",
+			"Name": "[0]图层18 的複製 6"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh29",
+			"GroupId": "ParamGroup12",
+			"Name": "[1]图层18 的複製 6"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh29",
+			"GroupId": "ParamGroup12",
+			"Name": "[2]图层18 的複製 6"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh29",
+			"GroupId": "ParamGroup12",
+			"Name": "[3]图层18 的複製 6"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh29",
+			"GroupId": "ParamGroup12",
+			"Name": "[4]图层18 的複製 6"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh27",
+			"GroupId": "ParamGroup14",
+			"Name": "[0]图层18 的複製 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh27",
+			"GroupId": "ParamGroup14",
+			"Name": "[1]图层18 的複製 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh27",
+			"GroupId": "ParamGroup14",
+			"Name": "[2]图层18 的複製 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh27",
+			"GroupId": "ParamGroup14",
+			"Name": "[3]图层18 的複製 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh27",
+			"GroupId": "ParamGroup14",
+			"Name": "[4]图层18 的複製 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh28",
+			"GroupId": "ParamGroup15",
+			"Name": "[0]图层18 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh28",
+			"GroupId": "ParamGroup15",
+			"Name": "[1]图层18 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh28",
+			"GroupId": "ParamGroup15",
+			"Name": "[2]图层18 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh28",
+			"GroupId": "ParamGroup15",
+			"Name": "[3]图层18 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh28",
+			"GroupId": "ParamGroup15",
+			"Name": "[4]图层18 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh26",
+			"GroupId": "ParamGroup16",
+			"Name": "[0]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh26",
+			"GroupId": "ParamGroup16",
+			"Name": "[1]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh26",
+			"GroupId": "ParamGroup16",
+			"Name": "[2]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh26",
+			"GroupId": "ParamGroup16",
+			"Name": "[3]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh26",
+			"GroupId": "ParamGroup16",
+			"Name": "[4]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh19",
+			"GroupId": "ParamGroup17",
+			"Name": "[0]图层27 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh19",
+			"GroupId": "ParamGroup17",
+			"Name": "[1]图层27 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh19",
+			"GroupId": "ParamGroup17",
+			"Name": "[2]图层27 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh20",
+			"GroupId": "ParamGroup18",
+			"Name": "[0]图层27 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh20",
+			"GroupId": "ParamGroup18",
+			"Name": "[1]图层27 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh20",
+			"GroupId": "ParamGroup18",
+			"Name": "[2]图层27 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh21",
+			"GroupId": "ParamGroup19",
+			"Name": "[0]图层27 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh21",
+			"GroupId": "ParamGroup19",
+			"Name": "[1]图层27 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh21",
+			"GroupId": "ParamGroup19",
+			"Name": "[2]图层27 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh21",
+			"GroupId": "ParamGroup19",
+			"Name": "[3]图层27 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh21",
+			"GroupId": "ParamGroup19",
+			"Name": "[4]图层27 的複製 3"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh129",
+			"GroupId": "ParamGroup20",
+			"Name": "[0]圖層 16"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh129",
+			"GroupId": "ParamGroup20",
+			"Name": "[1]圖層 16"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh129",
+			"GroupId": "ParamGroup20",
+			"Name": "[2]圖層 16"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh129",
+			"GroupId": "ParamGroup20",
+			"Name": "[3]圖層 16"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh129",
+			"GroupId": "ParamGroup20",
+			"Name": "[4]圖層 16"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh133",
+			"GroupId": "ParamGroup23",
+			"Name": "[0]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh133",
+			"GroupId": "ParamGroup23",
+			"Name": "[1]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh133",
+			"GroupId": "ParamGroup23",
+			"Name": "[2]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh133",
+			"GroupId": "ParamGroup23",
+			"Name": "[3]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh133",
+			"GroupId": "ParamGroup23",
+			"Name": "[4]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh7",
+			"GroupId": "ParamGroup24",
+			"Name": "[0]图层38 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh7",
+			"GroupId": "ParamGroup24",
+			"Name": "[1]图层38 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh7",
+			"GroupId": "ParamGroup24",
+			"Name": "[2]图层38 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh12",
+			"GroupId": "ParamGroup25",
+			"Name": "[0]徽章(2) 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh12",
+			"GroupId": "ParamGroup25",
+			"Name": "[1]徽章(2) 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh12",
+			"GroupId": "ParamGroup25",
+			"Name": "[2]徽章(2) 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh6",
+			"GroupId": "ParamGroup26",
+			"Name": "[0]图层38 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh6",
+			"GroupId": "ParamGroup26",
+			"Name": "[1]图层38 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh6",
+			"GroupId": "ParamGroup26",
+			"Name": "[2]图层38 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh13",
+			"GroupId": "ParamGroup27",
+			"Name": "[0]徽章(2) 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh13",
+			"GroupId": "ParamGroup27",
+			"Name": "[1]徽章(2) 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh13",
+			"GroupId": "ParamGroup27",
+			"Name": "[2]徽章(2) 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh219",
+			"GroupId": "ParamGroup28",
+			"Name": "[0]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh219",
+			"GroupId": "ParamGroup28",
+			"Name": "[1]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh219",
+			"GroupId": "ParamGroup28",
+			"Name": "[2]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh219",
+			"GroupId": "ParamGroup28",
+			"Name": "[3]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh219",
+			"GroupId": "ParamGroup28",
+			"Name": "[4]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 7"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh220",
+			"GroupId": "ParamGroup29",
+			"Name": "[0]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh220",
+			"GroupId": "ParamGroup29",
+			"Name": "[1]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh220",
+			"GroupId": "ParamGroup29",
+			"Name": "[2]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh220",
+			"GroupId": "ParamGroup29",
+			"Name": "[3]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh220",
+			"GroupId": "ParamGroup29",
+			"Name": "[4]ﾍｼｲ�18 ｵﾄﾑ}ﾑu 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh233",
+			"GroupId": "ParamGroup30",
+			"Name": "[0]图层92"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh233",
+			"GroupId": "ParamGroup30",
+			"Name": "[1]图层92"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh233",
+			"GroupId": "ParamGroup30",
+			"Name": "[2]图层92"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh233",
+			"GroupId": "ParamGroup30",
+			"Name": "[3]图层92"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh233",
+			"GroupId": "ParamGroup30",
+			"Name": "[4]图层92"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh234",
+			"GroupId": "ParamGroup31",
+			"Name": "[0]图层17 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh234",
+			"GroupId": "ParamGroup31",
+			"Name": "[1]图层17 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh234",
+			"GroupId": "ParamGroup31",
+			"Name": "[2]图层17 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh234",
+			"GroupId": "ParamGroup31",
+			"Name": "[3]图层17 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh234",
+			"GroupId": "ParamGroup31",
+			"Name": "[4]图层17 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh247",
+			"GroupId": "ParamGroup32",
+			"Name": "[0]图层27 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh247",
+			"GroupId": "ParamGroup32",
+			"Name": "[1]图层27 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh247",
+			"GroupId": "ParamGroup32",
+			"Name": "[2]图层27 的複製 2"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh246",
+			"GroupId": "ParamGroup33",
+			"Name": "[0]图层27 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh246",
+			"GroupId": "ParamGroup33",
+			"Name": "[1]图层27 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh246",
+			"GroupId": "ParamGroup33",
+			"Name": "[2]图层27 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh256",
+			"GroupId": "ParamGroup36",
+			"Name": "[0]图层91"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh256",
+			"GroupId": "ParamGroup36",
+			"Name": "[1]图层91"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh256",
+			"GroupId": "ParamGroup36",
+			"Name": "[2]图层91"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh256",
+			"GroupId": "ParamGroup36",
+			"Name": "[3]图层91"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh256",
+			"GroupId": "ParamGroup36",
+			"Name": "[4]图层91"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh264",
+			"GroupId": "ParamGroup37",
+			"Name": "[0]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh264",
+			"GroupId": "ParamGroup37",
+			"Name": "[1]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh264",
+			"GroupId": "ParamGroup37",
+			"Name": "[2]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh264",
+			"GroupId": "ParamGroup37",
+			"Name": "[3]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh264",
+			"GroupId": "ParamGroup37",
+			"Name": "[4]图层25"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh263",
+			"GroupId": "ParamGroup38",
+			"Name": "[0]图层84"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh263",
+			"GroupId": "ParamGroup38",
+			"Name": "[1]图层84"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh263",
+			"GroupId": "ParamGroup38",
+			"Name": "[2]图层84"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh263",
+			"GroupId": "ParamGroup38",
+			"Name": "[3]图层84"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh263",
+			"GroupId": "ParamGroup38",
+			"Name": "[4]图层84"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh262",
+			"GroupId": "ParamGroup39",
+			"Name": "[0]图层94"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh262",
+			"GroupId": "ParamGroup39",
+			"Name": "[1]图层94"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh262",
+			"GroupId": "ParamGroup39",
+			"Name": "[2]图层94"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh262",
+			"GroupId": "ParamGroup39",
+			"Name": "[3]图层94"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh262",
+			"GroupId": "ParamGroup39",
+			"Name": "[4]图层94"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh281",
+			"GroupId": "ParamGroup40",
+			"Name": "[0]图层34 的複製 5(3)"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh281",
+			"GroupId": "ParamGroup40",
+			"Name": "[1]图层34 的複製 5(3)"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh281",
+			"GroupId": "ParamGroup40",
+			"Name": "[2]图层34 的複製 5(3)"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh281",
+			"GroupId": "ParamGroup40",
+			"Name": "[3]图层34 的複製 5(3)"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh281",
+			"GroupId": "ParamGroup40",
+			"Name": "[4]图层34 的複製 5(3)"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh282",
+			"GroupId": "ParamGroup41",
+			"Name": "[0]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh282",
+			"GroupId": "ParamGroup41",
+			"Name": "[1]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh282",
+			"GroupId": "ParamGroup41",
+			"Name": "[2]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh282",
+			"GroupId": "ParamGroup41",
+			"Name": "[3]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh282",
+			"GroupId": "ParamGroup41",
+			"Name": "[4]图层34 的複製 5"
+		},
+		{
+			"Id": "Param_Angle_Rotation_1_ArtMesh2665478568",
+			"GroupId": "ParamGroup42",
+			"Name": "[0]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_2_ArtMesh2665478568",
+			"GroupId": "ParamGroup42",
+			"Name": "[1]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_3_ArtMesh2665478568",
+			"GroupId": "ParamGroup42",
+			"Name": "[2]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_4_ArtMesh2665478568",
+			"GroupId": "ParamGroup42",
+			"Name": "[3]图层18 的複製"
+		},
+		{
+			"Id": "Param_Angle_Rotation_5_ArtMesh2665478568",
+			"GroupId": "ParamGroup42",
+			"Name": "[4]图层18 的複製"
+		}
+	],
+	"ParameterGroups": [
+		{
+			"Id": "ParamGroup2",
+			"GroupId": "",
+			"Name": "头角度"
+		},
+		{
+			"Id": "ParamGroup",
+			"GroupId": "",
+			"Name": "眼睛"
+		},
+		{
+			"Id": "ParamGroup3",
+			"GroupId": "",
+			"Name": "嘴"
+		},
+		{
+			"Id": "ParamGroup48",
+			"GroupId": "",
+			"Name": "VB"
+		},
+		{
+			"Id": "ParamGroup5",
+			"GroupId": "",
+			"Name": "头发摆动"
+		},
+		{
+			"Id": "ParamGroup13",
+			"GroupId": "",
+			"Name": "部件摆动"
+		},
+		{
+			"Id": "ParamGroup4",
+			"GroupId": "",
+			"Name": "图层34 的複製 20"
+		},
+		{
+			"Id": "ParamGroup6",
+			"GroupId": "",
+			"Name": "图层34 的複製 5"
+		},
+		{
+			"Id": "ParamGroup7",
+			"GroupId": "",
+			"Name": "图层32 的複製 8"
+		},
+		{
+			"Id": "ParamGroup8",
+			"GroupId": "",
+			"Name": "图层32 的複製 10"
+		},
+		{
+			"Id": "ParamGroup9",
+			"GroupId": "",
+			"Name": "图层32 的複製 7"
+		},
+		{
+			"Id": "ParamGroup10",
+			"GroupId": "",
+			"Name": "图层32 的複製 9"
+		},
+		{
+			"Id": "ParamGroup11",
+			"GroupId": "",
+			"Name": "图层18 的複製 3"
+		},
+		{
+			"Id": "ParamGroup12",
+			"GroupId": "",
+			"Name": "图层18 的複製 6"
+		},
+		{
+			"Id": "ParamGroup14",
+			"GroupId": "",
+			"Name": "图层18 的複製 7"
+		},
+		{
+			"Id": "ParamGroup15",
+			"GroupId": "",
+			"Name": "图层18 的複製 2"
+		},
+		{
+			"Id": "ParamGroup16",
+			"GroupId": "",
+			"Name": "图层18 的複製"
+		},
+		{
+			"Id": "ParamGroup17",
+			"GroupId": "",
+			"Name": "图层27 的複製"
+		},
+		{
+			"Id": "ParamGroup18",
+			"GroupId": "",
+			"Name": "图层27 的複製 2"
+		},
+		{
+			"Id": "ParamGroup19",
+			"GroupId": "",
+			"Name": "图层27 的複製 3"
+		},
+		{
+			"Id": "ParamGroup20",
+			"GroupId": "",
+			"Name": "圖層 16"
+		},
+		{
+			"Id": "ParamGroup21",
+			"GroupId": "",
+			"Name": "图层27 的複製"
+		},
+		{
+			"Id": "ParamGroup22",
+			"GroupId": "",
+			"Name": "图层27 的複製 2"
+		},
+		{
+			"Id": "ParamGroup23",
+			"GroupId": "",
+			"Name": "图层25"
+		},
+		{
+			"Id": "ParamGroup24",
+			"GroupId": "",
+			"Name": "图层38 的複製 2"
+		},
+		{
+			"Id": "ParamGroup25",
+			"GroupId": "",
+			"Name": "徽章(2) 的複製 2"
+		},
+		{
+			"Id": "ParamGroup26",
+			"GroupId": "",
+			"Name": "图层38 的複製"
+		},
+		{
+			"Id": "ParamGroup27",
+			"GroupId": "",
+			"Name": "徽章(2) 的複製"
+		},
+		{
+			"Id": "ParamGroup28",
+			"GroupId": "",
+			"Name": "ﾍｼｲ�18 ｵﾄﾑ}ﾑu 7"
+		},
+		{
+			"Id": "ParamGroup29",
+			"GroupId": "",
+			"Name": "ﾍｼｲ�18 ｵﾄﾑ}ﾑu 2"
+		},
+		{
+			"Id": "ParamGroup30",
+			"GroupId": "",
+			"Name": "图层92"
+		},
+		{
+			"Id": "ParamGroup31",
+			"GroupId": "",
+			"Name": "图层17 的複製"
+		},
+		{
+			"Id": "ParamGroup32",
+			"GroupId": "",
+			"Name": "图层27 的複製 2"
+		},
+		{
+			"Id": "ParamGroup33",
+			"GroupId": "",
+			"Name": "图层27 的複製"
+		},
+		{
+			"Id": "ParamGroup34",
+			"GroupId": "",
+			"Name": "图层27 的複製"
+		},
+		{
+			"Id": "ParamGroup35",
+			"GroupId": "",
+			"Name": "图层27 的複製 2"
+		},
+		{
+			"Id": "ParamGroup36",
+			"GroupId": "",
+			"Name": "图层91"
+		},
+		{
+			"Id": "ParamGroup37",
+			"GroupId": "",
+			"Name": "图层25"
+		},
+		{
+			"Id": "ParamGroup38",
+			"GroupId": "",
+			"Name": "图层84"
+		},
+		{
+			"Id": "ParamGroup39",
+			"GroupId": "",
+			"Name": "图层94"
+		},
+		{
+			"Id": "ParamGroup40",
+			"GroupId": "",
+			"Name": "图层34 的複製 5(3)"
+		},
+		{
+			"Id": "ParamGroup41",
+			"GroupId": "",
+			"Name": "图层34 的複製 5"
+		},
+		{
+			"Id": "ParamGroup42",
+			"GroupId": "",
+			"Name": "图层18 的複製"
+		}
+	],
+	"Parts": [
+		{
+			"Id": "Part",
+			"Name": "组 1"
+		},
+		{
+			"Id": "ArtMesh2665478568_Skinning",
+			"Name": "图层18 的複製(蒙皮)"
+		},
+		{
+			"Id": "Part44",
+			"Name": "图层18 的複製(旋转)"
+		},
+		{
+			"Id": "Part2",
+			"Name": "挥手"
+		},
+		{
+			"Id": "Part3",
+			"Name": "徽章"
+		},
+		{
+			"Id": "Part5",
+			"Name": "帽子"
+		},
+		{
+			"Id": "Part6",
+			"Name": "前发"
+		},
+		{
+			"Id": "ArtMesh219_Skinning",
+			"Name": "ﾍｼｲ�18 ｵﾄﾑ}ﾑu 7(蒙皮)"
+		},
+		{
+			"Id": "Part54",
+			"Name": "ﾍｼｲ�18 ｵﾄﾑ}ﾑu 7(回转)"
+		},
+		{
+			"Id": "ArtMesh220_Skinning",
+			"Name": "ﾍｼｲ�18 ｵﾄﾑ}ﾑu 2(蒙皮)"
+		},
+		{
+			"Id": "Part55",
+			"Name": "ﾍｼｲ�18 ｵﾄﾑ}ﾑu 2(回转)"
+		},
+		{
+			"Id": "Part7",
+			"Name": "表情"
+		},
+		{
+			"Id": "Part12",
+			"Name": "眼睛左"
+		},
+		{
+			"Id": "Part13",
+			"Name": "眼睛右"
+		},
+		{
+			"Id": "Part14",
+			"Name": "鼻子"
+		},
+		{
+			"Id": "Part15",
+			"Name": "嘴"
+		},
+		{
+			"Id": "Part16",
+			"Name": "面条眼泪"
+		},
+		{
+			"Id": "Part17",
+			"Name": "脸"
+		},
+		{
+			"Id": "ArtMesh262_Skinning",
+			"Name": "图层94(蒙皮)"
+		},
+		{
+			"Id": "Part63",
+			"Name": "图层94(旋转)"
+		},
+		{
+			"Id": "Part18",
+			"Name": "杂毛"
+		},
+		{
+			"Id": "Part19",
+			"Name": "上身"
+		},
+		{
+			"Id": "Part23",
+			"Name": "裙子"
+		},
+		{
+			"Id": "Part25",
+			"Name": "腿左"
+		},
+		{
+			"Id": "Part27",
+			"Name": "腿右"
+		},
+		{
+			"Id": "Part29",
+			"Name": "手臂右"
+		},
+		{
+			"Id": "Part30",
+			"Name": "手臂左"
+		},
+		{
+			"Id": "Part31",
+			"Name": "背后蝴蝶结"
+		},
+		{
+			"Id": "Part32",
+			"Name": "头饰后"
+		},
+		{
+			"Id": "Part33",
+			"Name": "后发"
+		},
+		{
+			"Id": "ArtMesh6_Skinning",
+			"Name": "图层38 的複製(蒙皮)"
+		},
+		{
+			"Id": "Part52",
+			"Name": "图层38 的複製(回转)"
+		},
+		{
+			"Id": "ArtMesh7_Skinning",
+			"Name": "图层38 的複製 2(蒙皮)"
+		},
+		{
+			"Id": "Part50",
+			"Name": "图层38 的複製 2(回转)"
+		},
+		{
+			"Id": "Part4",
+			"Name": "徽章阴影"
+		},
+		{
+			"Id": "ArtMesh19_Skinning",
+			"Name": "图层27 的複製(蒙皮)"
+		},
+		{
+			"Id": "Part45",
+			"Name": "图层27 的複製(回转)"
+		},
+		{
+			"Id": "ArtMesh20_Skinning",
+			"Name": "图层27 的複製 2(蒙皮)"
+		},
+		{
+			"Id": "Part46",
+			"Name": "图层27 的複製 2(回转)"
+		},
+		{
+			"Id": "ArtMesh246_Skinning",
+			"Name": "图层27 的複製(蒙皮)"
+		},
+		{
+			"Id": "Part58",
+			"Name": "图层27 的複製(旋转)"
+		},
+		{
+			"Id": "ArtMesh247_Skinning",
+			"Name": "图层27 的複製 2(蒙皮)"
+		},
+		{
+			"Id": "Part59",
+			"Name": "图层27 的複製 2(旋转)"
+		},
+		{
+			"Id": "ArtMesh233_Skinning",
+			"Name": "图层92(蒙皮)"
+		},
+		{
+			"Id": "Part56",
+			"Name": "图层92(旋转)"
+		},
+		{
+			"Id": "ArtMesh234_Skinning",
+			"Name": "图层17 的複製(蒙皮)"
+		},
+		{
+			"Id": "Part57",
+			"Name": "图层17 的複製(旋转)"
+		},
+		{
+			"Id": "ArtMesh27_Skinning",
+			"Name": "图层18 的複製 7(蒙皮)"
+		},
+		{
+			"Id": "Part42",
+			"Name": "图层18 的複製 7(回转)"
+		},
+		{
+			"Id": "ArtMesh28_Skinning",
+			"Name": "图层18 的複製 2(蒙皮)"
+		},
+		{
+			"Id": "Part43",
+			"Name": "图层18 的複製 2(回转)"
+		},
+		{
+			"Id": "Part8",
+			"Name": "豆豆眼"
+		},
+		{
+			"Id": "Part9",
+			"Name": "爱心眼"
+		},
+		{
+			"Id": "Part10",
+			"Name": "星星眼"
+		},
+		{
+			"Id": "Part11",
+			"Name": "泪汪汪"
+		},
+		{
+			"Id": "ArtMesh29_Skinning",
+			"Name": "图层18 的複製 6(蒙皮)"
+		},
+		{
+			"Id": "Part41",
+			"Name": "图层18 的複製 6(回转)"
+		},
+		{
+			"Id": "ArtMesh30_Skinning",
+			"Name": "图层18 的複製 3(蒙皮)"
+		},
+		{
+			"Id": "Part40",
+			"Name": "图层18 的複製 3(回转)"
+		},
+		{
+			"Id": "Part24",
+			"Name": "蝴蝶结"
+		},
+		{
+			"Id": "Part20",
+			"Name": "外衣领子"
+		},
+		{
+			"Id": "Part21",
+			"Name": "领子"
+		},
+		{
+			"Id": "Part26",
+			"Name": "蝴蝶结"
+		},
+		{
+			"Id": "Part28",
+			"Name": "蝴蝶结"
+		},
+		{
+			"Id": "ArtMesh281_Skinning",
+			"Name": "图层34 的複製 5(3)(蒙皮)"
+		},
+		{
+			"Id": "Part64",
+			"Name": "图层34 的複製 5(3)(旋转)"
+		},
+		{
+			"Id": "ArtMesh282_Skinning",
+			"Name": "图层34 的複製 5(蒙皮)"
+		},
+		{
+			"Id": "Part65",
+			"Name": "图层34 的複製 5(旋转)"
+		},
+		{
+			"Id": "ArtMesh125_Skinning",
+			"Name": "图层34 的複製 20(蒙皮)"
+		},
+		{
+			"Id": "Part34",
+			"Name": "图层34 的複製 20(回转)"
+		},
+		{
+			"Id": "ArtMesh127_Skinning",
+			"Name": "图层34 的複製 5(蒙皮)"
+		},
+		{
+			"Id": "Part35",
+			"Name": "图层34 的複製 5(回转)"
+		},
+		{
+			"Id": "ArtMesh21_Skinning",
+			"Name": "图层27 的複製 3(蒙皮)"
+		},
+		{
+			"Id": "Part47",
+			"Name": "图层27 的複製 3(回转)"
+		},
+		{
+			"Id": "ArtMesh256_Skinning",
+			"Name": "图层91(蒙皮)"
+		},
+		{
+			"Id": "Part60",
+			"Name": "图层91(旋转)"
+		},
+		{
+			"Id": "ArtMesh129_Skinning",
+			"Name": "圖層 16(蒙皮)"
+		},
+		{
+			"Id": "Part48",
+			"Name": "圖層 16(回转)"
+		},
+		{
+			"Id": "ArtMesh263_Skinning",
+			"Name": "图层84(蒙皮)"
+		},
+		{
+			"Id": "Part62",
+			"Name": "图层84(旋转)"
+		},
+		{
+			"Id": "ArtMesh264_Skinning",
+			"Name": "图层25(蒙皮)"
+		},
+		{
+			"Id": "Part61",
+			"Name": "图层25(旋转)"
+		},
+		{
+			"Id": "ArtMesh133_Skinning",
+			"Name": "图层25(蒙皮)"
+		},
+		{
+			"Id": "Part49",
+			"Name": "图层25(回转)"
+		},
+		{
+			"Id": "ArtMesh12_Skinning",
+			"Name": "徽章(2) 的複製 2(蒙皮)"
+		},
+		{
+			"Id": "Part51",
+			"Name": "徽章(2) 的複製 2(回转)"
+		},
+		{
+			"Id": "ArtMesh13_Skinning",
+			"Name": "徽章(2) 的複製(蒙皮)"
+		},
+		{
+			"Id": "Part53",
+			"Name": "徽章(2) 的複製(回转)"
+		},
+		{
+			"Id": "Part22",
+			"Name": "领结蝴蝶结"
+		},
+		{
+			"Id": "ArtMesh81_Skinning",
+			"Name": "图层32 的複製 8(蒙皮)"
+		},
+		{
+			"Id": "Part36",
+			"Name": "图层32 的複製 8(回转)"
+		},
+		{
+			"Id": "ArtMesh82_Skinning",
+			"Name": "图层32 的複製 7(蒙皮)"
+		},
+		{
+			"Id": "Part38",
+			"Name": "图层32 的複製 7(回转)"
+		},
+		{
+			"Id": "ArtMesh84_Skinning",
+			"Name": "图层32 的複製 10(蒙皮)"
+		},
+		{
+			"Id": "Part37",
+			"Name": "图层32 的複製 10(回转)"
+		},
+		{
+			"Id": "ArtMesh85_Skinning",
+			"Name": "图层32 的複製 9(蒙皮)"
+		},
+		{
+			"Id": "Part39",
+			"Name": "图层32 的複製 9(回转)"
+		}
+	],
+	"CombinedParameters": [
+		[
+			"ParamMouthForm",
+			"ParamMouthOpenY"
+		]
+	]
+}
