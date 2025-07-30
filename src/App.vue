@@ -555,37 +555,72 @@ async function resetAllExpressionParameters() {
   if (!model || !isModelLoaded.value) return
 
   try {
-    // 对于独立表情文件，我们采用更简单的方法
-    // 直接重置已知的常见表情参数到 0 值
     const coreModel = model.internalModel.coreModel
 
-    // 常见的表情参数名称模式
-    const commonExpressionParams = [
-      // 通用参数模式
-      'Param17', 'Param22', 'Param56', 'Param57', 'Param62', 'Param64', 'Param72', 'Param73', 'Param74',
-      // 眉毛相关
-      'ParamBrowLForm', 'ParamBrowRForm', 'ParamBrowLY', 'ParamBrowRY',
-      // 眼睛相关
-      'ParamEyeLOpen', 'ParamEyeROpen', 'ParamEyeBallX', 'ParamEyeBallY',
-      // 嘴巴相关
-      'ParamMouthForm', 'ParamMouthOpenY',
-      // 表情相关
-      'ParamCheek', 'ParamBodyAngleX', 'ParamBodyAngleY', 'ParamBodyAngleZ'
-    ]
+    // 获取所有表情文件中涉及的参数ID
+    const allExpressionParams = new Set()
 
-    // 尝试重置这些参数到 0
-    for (const paramId of commonExpressionParams) {
-      try {
-        // 先检查参数是否存在，如果存在就重置为 0
-        const currentValue = coreModel.getParameterValueById(paramId)
-        if (currentValue !== undefined && currentValue !== null) {
-          coreModel.setParameterValueById(paramId, 0)
-          console.log(`重置参数 ${paramId} = 0`)
+    // 遍历当前模型的所有表情文件
+    const expressions = currentConfig.value.expressions
+    for (const exp of expressions) {
+      if (exp.file) {
+        try {
+          const expressionPath = `/models/${currentModelName.value}/${exp.file}`
+          const response = await fetch(expressionPath)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.Parameters) {
+              data.Parameters.forEach(param => allExpressionParams.add(param.Id))
+            }
+          }
+        } catch (error) {
+          console.warn(`加载表情文件 ${exp.file} 失败:`, error.message)
         }
-      } catch (paramError) {
-        // 参数不存在，忽略
       }
     }
+
+    console.log(`找到 ${allExpressionParams.size} 个表情参数需要重置`)
+
+    // 将所有表情参数重置为默认值
+    allExpressionParams.forEach(paramId => {
+      try {
+        let paramIndex = -1
+
+        // 尝试不同的获取参数索引的方法
+        if (typeof coreModel.getParameterIndexById === 'function') {
+          paramIndex = coreModel.getParameterIndexById(paramId)
+        } else if (typeof coreModel.getParameterIndex === 'function') {
+          paramIndex = coreModel.getParameterIndex(paramId)
+        }
+
+        if (paramIndex >= 0) {
+          // 获取默认值
+          let defaultValue = 0
+          if (typeof coreModel.getParameterDefaultValueByIndex === 'function') {
+            defaultValue = coreModel.getParameterDefaultValueByIndex(paramIndex)
+          } else if (typeof coreModel.getParameterDefaultValue === 'function') {
+            defaultValue = coreModel.getParameterDefaultValue(paramIndex)
+          }
+
+          // 设置为默认值
+          if (typeof coreModel.setParameterValueByIndex === 'function') {
+            coreModel.setParameterValueByIndex(paramIndex, defaultValue)
+            console.log(`重置参数 ${paramId} (索引${paramIndex}) = ${defaultValue}`)
+          } else if (typeof coreModel.setParameterValue === 'function') {
+            coreModel.setParameterValue(paramIndex, defaultValue)
+            console.log(`重置参数 ${paramId} (索引${paramIndex}) = ${defaultValue}`)
+          } else {
+            // 备用方法：使用 setParameterValueById
+            coreModel.setParameterValueById(paramId, defaultValue)
+            console.log(`重置参数 ${paramId} = ${defaultValue} (使用ID方法)`)
+          }
+        } else {
+          console.warn(`未找到参数索引: ${paramId}`)
+        }
+      } catch (error) {
+        console.warn(`重置参数 ${paramId} 失败:`, error.message)
+      }
+    })
 
     console.log('表情参数已重置到默认值')
   } catch (error) {
