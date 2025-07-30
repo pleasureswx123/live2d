@@ -200,7 +200,7 @@ onMounted(async () => {
       view: canvas.value,
       width: 600,
       height: 600,
-      backgroundColor: 0xffffff,
+      backgroundColor: 0x000000,
       autoDensity: true,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
@@ -239,6 +239,16 @@ onUnmounted(() => {
   }
 })
 
+// 获取 Canvas 的逻辑尺寸（CSS 尺寸，不受 devicePixelRatio 影响）
+function getCanvasLogicalSize() {
+  const canvas = app.view
+  const rect = canvas.getBoundingClientRect()
+  return {
+    width: rect.width,
+    height: rect.height
+  }
+}
+
 // 处理窗口大小变化
 function handleResize() {
   if (!model || !isModelLoaded.value || !app) return
@@ -247,8 +257,8 @@ function handleResize() {
   clearTimeout(handleResize.timeoutId)
   handleResize.timeoutId = setTimeout(() => {
     console.log('窗口大小变化，重新调整模型')
-    const canvasWidth = app.view.width
-    const canvasHeight = app.view.height
+    const { width: canvasWidth, height: canvasHeight } = getCanvasLogicalSize()
+    console.log(`Canvas 逻辑尺寸: ${canvasWidth} x ${canvasHeight}, 设备像素比: ${window.devicePixelRatio}`)
     autoFitModel(model, canvasWidth, canvasHeight)
   }, 300)
 }
@@ -274,8 +284,8 @@ function calculateAutoScale(model, canvasWidth, canvasHeight) {
     const modelHeight = bounds.height
 
     // 设置目标尺寸（留出边距）
-    const targetWidth = canvasWidth * 0.75  // 使用 canvas 75% 的宽度
-    const targetHeight = canvasHeight * 0.75 // 使用 canvas 85% 的高度
+    const targetWidth = canvasWidth * 1  // 使用 canvas 75% 的宽度
+    const targetHeight = canvasHeight * 1 // 使用 canvas 85% 的高度
 
     // 计算缩放比例（取较小值以确保模型完全显示）
     const scaleX = targetWidth / modelWidth
@@ -334,41 +344,10 @@ function autoFitModel(model, canvasWidth, canvasHeight) {
         const centerX = canvasWidth / 2
         const centerY = canvasHeight / 2
 
-        // 根据模型类型调整位置偏移
-        let offsetY = 0
-        switch (currentModelName.value) {
-          case 'idol':
-            offsetY = scaledBounds.height * 0.05 // idol 模型稍微向上
-            break
-          case 'lanhei':
-            offsetY = -scaledBounds.height * 0.1 // lanhei 模型稍微向下
-            break
-          case 'hibiki':
-            offsetY = scaledBounds.height * 0.02 // hibiki 模型稍微向上
-            break
-          case 'hiyori':
-            offsetY = -scaledBounds.height * 0.05 // hiyori 模型稍微向下
-            break
-          case 'mark':
-            offsetY = scaledBounds.height * 0.03 // mark 模型稍微向上
-            break
-          case 'natori':
-            offsetY = -scaledBounds.height * 0.08 // natori 模型稍微向下
-            break
-          case 'kei_basic':
-            offsetY = scaledBounds.height * 0.04 // kei_basic 模型稍微向上
-            break
-          case 'kei_vowels':
-            offsetY = scaledBounds.height * 0.04 // kei_vowels 模型稍微向上
-            break
-          default:
-            offsetY = 0 // 默认居中
-        }
-
         // 设置模型位置
         model.position.set(
           centerX - scaledBounds.width / 2,
-          centerY - scaledBounds.height / 2 + offsetY
+          centerY - scaledBounds.height / 2
         )
 
         console.log(`模型自动调整完成: scale=${autoScale.toFixed(4)}, position=(${model.position.x.toFixed(2)}, ${model.position.y.toFixed(2)})`)
@@ -423,8 +402,8 @@ async function loadModel(modelName) {
     await new Promise(resolve => requestAnimationFrame(resolve))
 
     // 自动调整模型缩放和位置
-    const canvasWidth = app.view.width
-    const canvasHeight = app.view.height
+    const { width: canvasWidth, height: canvasHeight } = getCanvasLogicalSize()
+    console.log(`模型加载完成，Canvas 逻辑尺寸: ${canvasWidth} x ${canvasHeight}`)
     autoFitModel(model, canvasWidth, canvasHeight)
 
     // 重置选择
@@ -821,8 +800,8 @@ function refitModel() {
 
   try {
     console.log('手动重新调整模型')
-    const canvasWidth = app.view.width
-    const canvasHeight = app.view.height
+    const { width: canvasWidth, height: canvasHeight } = getCanvasLogicalSize()
+    console.log(`手动调整 Canvas 逻辑尺寸: ${canvasWidth} x ${canvasHeight}`)
     autoFitModel(model, canvasWidth, canvasHeight)
     console.log('模型重新调整完成')
   } catch (error) {
