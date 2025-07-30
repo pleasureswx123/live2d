@@ -1,6 +1,6 @@
 <script setup>
 import * as PIXI from 'pixi.js'
-import { Live2DModel } from 'pixi-live2d-display'
+import { Live2DModel, SoundManager, MotionPriority } from 'pixi-live2d-display'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 window.PIXI = PIXI
@@ -206,6 +206,9 @@ onMounted(async () => {
       resolution: window.devicePixelRatio || 1,
     })
 
+    // 配置 SoundManager
+    SoundManager.volume = audioVolume.value
+
     // 添加模型更新循环
     app.ticker.add(() => {
       if (model) {
@@ -400,6 +403,20 @@ async function loadModel(modelName) {
     model = await Live2DModel.from(config.path)
     console.log('模型加载成功:', model)
 
+    // 添加动作开始事件监听器，用于音频同步
+    model.internalModel.motionManager.on('motionStart', (group, index, audio) => {
+      console.log(`动作开始: 组=${group}, 索引=${index}`)
+      if (audio) {
+        console.log('动作包含音频，已自动播放')
+        // 这里可以添加字幕显示等功能
+      }
+    })
+
+    // 添加动作结束事件监听器
+    model.internalModel.motionManager.on('motionFinish', (group, index) => {
+      console.log(`动作结束: 组=${group}, 索引=${index}`)
+    })
+
     app.stage.addChild(model)
 
     // 等待一帧以确保模型完全渲染
@@ -436,7 +453,7 @@ async function changeModel() {
 }
 
 // 播放指定动作
-function playMotion() {
+async function playMotion() {
   if (!model || !isModelLoaded.value || !selectedMotion.value) {
     console.warn('模型未加载或未选择动作')
     return
@@ -444,7 +461,64 @@ function playMotion() {
 
   try {
     console.log(`播放动作: ${selectedMotion.value}`)
-    model.motion(selectedMotion.value)
+
+    // 停止当前所有动作
+    model.internalModel.motionManager.stopAllMotions()
+
+    // 检查模型是否有预定义的动作组
+    const hasPreDefinedMotions = model.internalModel.settings.motions &&
+                                Object.keys(model.internalModel.settings.motions).length > 0
+
+    if (hasPreDefinedMotions) {
+      // 对于有预定义动作组的模型（如 hibiki, hiyori）
+      // 查找动作在哪个组中
+      const motions = model.internalModel.settings.motions
+      let foundGroup = null
+      let foundIndex = -1
+
+      for (const [groupName, motionList] of Object.entries(motions)) {
+        const index = motionList.findIndex(motion => motion.File === selectedMotion.value)
+        if (index !== -1) {
+          foundGroup = groupName
+          foundIndex = index
+          break
+        }
+      }
+
+      if (foundGroup !== null) {
+        console.log(`使用预定义动作组: ${foundGroup}, 索引: ${foundIndex}`)
+        await model.motion(foundGroup, foundIndex, MotionPriority.NORMAL)
+      } else {
+        console.warn('在预定义动作组中未找到指定动作')
+      }
+    } else {
+      // 对于只有独立动作文件的模型（如 idol, lanhei）
+      // 需要动态加载动作文件
+      const motionPath = `/models/${currentModelName.value}/${selectedMotion.value}`
+      console.log(`加载独立动作文件: ${motionPath}`)
+
+      try {
+        const response = await fetch(motionPath)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const motionData = await response.json()
+
+        // 使用 motionManager 直接播放动作
+        await model.internalModel.motionManager.startMotion(
+          'custom', // 自定义组名
+          0, // 索引
+          MotionPriority.NORMAL,
+          null, // onFinish callback
+          motionData // 直接传入动作数据
+        )
+
+        console.log('独立动作文件播放成功')
+      } catch (fetchError) {
+        console.error('加载动作文件失败:', fetchError)
+        return
+      }
+    }
 
     // 如果动作有对应的音频，自动播放
     const motions = currentConfig.value.motions
@@ -460,7 +534,7 @@ function playMotion() {
 }
 
 // 播放随机动作
-function playRandomMotion() {
+async function playRandomMotion() {
   if (!model || !isModelLoaded.value) {
     console.warn('模型还未加载完成')
     return
@@ -472,23 +546,92 @@ function playRandomMotion() {
   const randomMotion = motions[randomInt(0, motions.length - 1)]
   selectedMotion.value = randomMotion.file
 
-  try {
-    console.log(`播放随机动作: ${randomMotion.name}`)
-    model.motion(randomMotion.file)
+  // 调用修复后的 playMotion 函数
+  await playMotion()
+}
 
-    // 如果动作有对应的音频，自动播放
-    if (randomMotion.sound) {
-      playAudioFile(randomMotion.sound)
+// 重置所有表情参数到默认值
+async function resetAllExpressionParameters() {
+  if (!model || !isModelLoaded.value) return
+
+  try {
+    // 获取模型的所有参数
+    const coreModel = model.internalModel.coreModel
+    const parameterCount = coreModel.getParameterCount()
+
+    // 重置所有可能的表情参数
+    for (let i = 0; i < parameterCount; i++) {
+      const parameterId = coreModel.getParameterId(i)
+      const defaultValue = coreModel.getParameterDefaultValue(i)
+
+      // 只重置表情相关的参数（通常包含这些关键词）
+      if (parameterId.includes('Param') ||
+          parameterId.includes('PARAM') ||
+          parameterId.includes('Expression') ||
+          parameterId.includes('Face') ||
+          parameterId.includes('Mouth') ||
+          parameterId.includes('Eye') ||
+          parameterId.includes('Brow')) {
+        coreModel.setParameterValueById(parameterId, defaultValue)
+      }
     }
 
-    console.log('动作播放成功')
+    console.log('表情参数已重置到默认值')
   } catch (error) {
-    console.error('播放动作失败:', error)
+    console.error('重置表情参数失败:', error)
+  }
+}
+
+// 从文件应用表情
+async function applyExpressionFromFile(expressionFile) {
+  try {
+    const expressionPath = `/models/${currentModelName.value}/${expressionFile}`
+    console.log(`加载表情文件: ${expressionPath}`)
+
+    const response = await fetch(expressionPath)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const expressionData = await response.json()
+
+    if (expressionData.Type !== 'Live2D Expression' || !expressionData.Parameters) {
+      throw new Error('无效的表情文件格式')
+    }
+
+    // 应用表情参数
+    const coreModel = model.internalModel.coreModel
+
+    for (const param of expressionData.Parameters) {
+      try {
+        let newValue = param.Value
+
+        // 处理不同的混合模式
+        if (param.Blend === 'Add') {
+          const currentValue = coreModel.getParameterValueById(param.Id)
+          newValue = currentValue + param.Value
+        } else if (param.Blend === 'Multiply') {
+          const currentValue = coreModel.getParameterValueById(param.Id)
+          newValue = currentValue * param.Value
+        }
+        // 默认是 'Overwrite' 模式，直接设置值
+
+        coreModel.setParameterValueById(param.Id, newValue)
+        console.log(`设置参数 ${param.Id} = ${newValue} (模式: ${param.Blend || 'Overwrite'})`)
+      } catch (error) {
+        console.warn(`设置参数失败 ${param.Id}:`, error)
+      }
+    }
+
+    console.log('表情文件应用成功')
+  } catch (error) {
+    console.error('应用表情文件失败:', error)
+    throw error
   }
 }
 
 // 播放指定表情
-function playExpression() {
+async function playExpression() {
   if (!model || !isModelLoaded.value || !selectedExpression.value) {
     console.warn('模型未加载或未选择表情')
     return
@@ -505,12 +648,35 @@ function playExpression() {
   try {
     console.log(`播放表情: ${selectedExp.name} (${selectedExp.file})`)
 
-    // 优先使用索引方式
-    if (selectedExp.index !== undefined) {
-      model.expression(selectedExp.index)
+    // 检查模型是否有预定义的表情
+    const hasPreDefinedExpressions = model.internalModel.settings.expressions &&
+                                   model.internalModel.settings.expressions.length > 0
+
+    if (hasPreDefinedExpressions) {
+      // 对于有预定义表情的模型（如 hibiki, natori）
+      const expressions = model.internalModel.settings.expressions
+      const foundExpression = expressions.find(exp => exp.File === selectedExpression.value)
+
+      if (foundExpression) {
+        console.log(`使用预定义表情: ${foundExpression.Name}`)
+        model.expression(foundExpression.Name)
+      } else {
+        // 尝试使用索引
+        if (selectedExp.index !== undefined) {
+          model.expression(selectedExp.index)
+        } else {
+          console.warn('在预定义表情中未找到指定表情')
+        }
+      }
     } else {
-      // 备用文件名方式
-      model.expression(selectedExp.file)
+      // 对于只有独立表情文件的模型（如 idol, lanhei）
+      console.log('使用独立表情文件')
+
+      // 第一步：重置所有表情参数
+      await resetAllExpressionParameters()
+
+      // 第二步：应用新的表情
+      await applyExpressionFromFile(selectedExpression.value)
     }
 
     console.log('表情切换成功')
@@ -520,7 +686,7 @@ function playExpression() {
 }
 
 // 播放随机表情
-function playRandomExpression() {
+async function playRandomExpression() {
   if (!model || !isModelLoaded.value) {
     console.warn('模型还未加载完成')
     return
@@ -532,25 +698,12 @@ function playRandomExpression() {
   const randomExp = expressions[randomInt(0, expressions.length - 1)]
   selectedExpression.value = randomExp.file
 
-  try {
-    console.log(`播放随机表情: ${randomExp.name}`)
-
-    // 优先使用索引方式
-    if (randomExp.index !== undefined) {
-      model.expression(randomExp.index)
-    } else {
-      // 备用文件名方式
-      model.expression(randomExp.file)
-    }
-
-    console.log('表情切换成功')
-  } catch (error) {
-    console.error('表情切换失败:', error)
-  }
+  // 调用修复后的 playExpression 函数
+  await playExpression()
 }
 
-// 添加重置表情的函数
-function resetExpression() {
+// 重置表情到默认状态
+async function resetExpression() {
   if (!model || !isModelLoaded.value) {
     console.warn('模型还未加载完成')
     return
@@ -558,18 +711,33 @@ function resetExpression() {
 
   try {
     console.log('重置表情到默认状态')
-    // 根据官方文档，调用内部表情管理器的重置方法
-    model.internalModel.motionManager.expressionManager.setRandomExpression()
+
+    // 检查模型是否有预定义的表情
+    const hasPreDefinedExpressions = model.internalModel.settings.expressions &&
+                                   model.internalModel.settings.expressions.length > 0
+
+    if (hasPreDefinedExpressions) {
+      // 对于有预定义表情的模型，使用表情管理器重置
+      try {
+        model.internalModel.motionManager.expressionManager.setExpression(null)
+        console.log('使用表情管理器重置成功')
+      } catch (error) {
+        // 备用方法：设置第一个表情或随机表情
+        model.expression(0)
+        console.log('使用备用方法重置表情')
+      }
+    } else {
+      // 对于只有独立表情文件的模型，重置所有参数到默认值
+      await resetAllExpressionParameters()
+      console.log('重置独立表情参数成功')
+    }
+
+    // 清除选中的表情
+    selectedExpression.value = ''
+
     console.log('表情重置成功')
   } catch (error) {
     console.error('表情重置失败:', error)
-
-    // 备用方法
-    try {
-      model.expression() // 随机表情作为备用
-    } catch (error2) {
-      console.error('备用重置方法也失败:', error2)
-    }
   }
 }
 
@@ -666,6 +834,10 @@ function stopAudio() {
 // 设置音频音量
 function setVolume(volume) {
   audioVolume.value = volume
+
+  // 同时设置 SoundManager 的全局音量
+  SoundManager.volume = volume
+
   if (currentAudio.value) {
     currentAudio.value.volume = volume
   }
