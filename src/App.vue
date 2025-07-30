@@ -693,19 +693,44 @@ async function playExpression() {
 
   try {
     console.log(`播放表情: ${selectedExp.name} (${selectedExp.file})`)
-
+    
     // 检查模型是否有预定义的表情
     const hasPreDefinedExpressions = model.internalModel.settings.expressions &&
                                    model.internalModel.settings.expressions.length > 0
 
     if (hasPreDefinedExpressions) {
+      // 对于预定义表情，不需要重置参数，直接应用表情
       // 对于有预定义表情的模型（如 hibiki, natori）
       const expressions = model.internalModel.settings.expressions
       const foundExpression = expressions.find(exp => exp.File === selectedExpression.value)
 
       if (foundExpression) {
         console.log(`使用预定义表情: ${foundExpression.Name}`)
-        model.expression(foundExpression.Name)
+
+        // 尝试不同的表情应用方法
+        try {
+          // 方法1: 直接使用表情管理器
+          const expressionManager = model.internalModel.motionManager.expressionManager
+          if (expressionManager && typeof expressionManager.setExpression === 'function') {
+            expressionManager.setExpression(foundExpression.Name)
+            console.log(`通过表情管理器设置表情: ${foundExpression.Name}`)
+          } else {
+            // 方法2: 使用模型的表情方法
+            const result = model.expression(foundExpression.Name)
+            if (result && typeof result.play === 'function') {
+              result.play()
+              console.log(`通过 expression().play() 设置表情: ${foundExpression.Name}`)
+            } else {
+              console.log(`通过 expression() 设置表情: ${foundExpression.Name}`)
+            }
+          }
+        } catch (error) {
+          console.error('设置预定义表情失败:', error)
+          // 备用方法：尝试使用索引
+          if (selectedExp.index !== undefined) {
+            model.expression(selectedExp.index)
+          }
+        }
       } else {
         // 尝试使用索引
         if (selectedExp.index !== undefined) {
