@@ -555,24 +555,35 @@ async function resetAllExpressionParameters() {
   if (!model || !isModelLoaded.value) return
 
   try {
-    // 获取模型的所有参数
+    // 对于独立表情文件，我们采用更简单的方法
+    // 直接重置已知的常见表情参数到 0 值
     const coreModel = model.internalModel.coreModel
-    const parameterCount = coreModel.getParameterCount()
 
-    // 重置所有可能的表情参数
-    for (let i = 0; i < parameterCount; i++) {
-      const parameterId = coreModel.getParameterId(i)
-      const defaultValue = coreModel.getParameterDefaultValue(i)
+    // 常见的表情参数名称模式
+    const commonExpressionParams = [
+      // 通用参数模式
+      'Param17', 'Param22', 'Param56', 'Param57', 'Param62', 'Param64', 'Param72', 'Param73', 'Param74',
+      // 眉毛相关
+      'ParamBrowLForm', 'ParamBrowRForm', 'ParamBrowLY', 'ParamBrowRY',
+      // 眼睛相关
+      'ParamEyeLOpen', 'ParamEyeROpen', 'ParamEyeBallX', 'ParamEyeBallY',
+      // 嘴巴相关
+      'ParamMouthForm', 'ParamMouthOpenY',
+      // 表情相关
+      'ParamCheek', 'ParamBodyAngleX', 'ParamBodyAngleY', 'ParamBodyAngleZ'
+    ]
 
-      // 只重置表情相关的参数（通常包含这些关键词）
-      if (parameterId.includes('Param') ||
-          parameterId.includes('PARAM') ||
-          parameterId.includes('Expression') ||
-          parameterId.includes('Face') ||
-          parameterId.includes('Mouth') ||
-          parameterId.includes('Eye') ||
-          parameterId.includes('Brow')) {
-        coreModel.setParameterValueById(parameterId, defaultValue)
+    // 尝试重置这些参数到 0
+    for (const paramId of commonExpressionParams) {
+      try {
+        // 先检查参数是否存在，如果存在就重置为 0
+        const currentValue = coreModel.getParameterValueById(paramId)
+        if (currentValue !== undefined && currentValue !== null) {
+          coreModel.setParameterValueById(paramId, 0)
+          console.log(`重置参数 ${paramId} = 0`)
+        }
+      } catch (paramError) {
+        // 参数不存在，忽略
       }
     }
 
