@@ -4,12 +4,17 @@ import { Live2DModel, SoundManager, MotionPriority } from 'pixi-live2d-display'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 window.PIXI = PIXI
+
+import testAudioUrl from '@/assets/test.wav'
+const audioFile = ref(testAudioUrl);
+
 const canvas = ref(null)
 const isModelLoaded = ref(false)
 const currentModelName = ref('idol')
 
 let app
 let model
+let audioContext
 
 // 模型配置
 const modelConfigs = {
@@ -194,8 +199,34 @@ const hasAudioSupport = computed(() => {
   return currentConfig.value.sounds && currentConfig.value.sounds.length > 0
 })
 
+const speaking = async () => {
+  const response = await fetch(audioFile);
+  const audioData = await response.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(audioData);
+  const source = audioContext.createBufferSource();
+  const analyser = audioContext.createAnalyser();
+  source.buffer = audioBuffer;
+  analyser.connect(audioContext.destination)
+  source.connect(analyser)
+  source.start();
+  
+  const updateMouth = () => {
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(dataArray);
+    const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+    const mouthOpen = Math.min(1, volume / 50);
+    model.internalModel.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthOpen);
+    if ( audioContext.state !== 'close') {
+      requestAnimationFrame(updateMouth)
+    }
+  }
+  updateMouth();
+}
+
 onMounted(async () => {
   try {
+    audioContext = new AudioContext();
+    
     app = new PIXI.Application({
       view: canvas.value,
       width: 600,
