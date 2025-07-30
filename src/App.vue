@@ -199,28 +199,133 @@ const hasAudioSupport = computed(() => {
   return currentConfig.value.sounds && currentConfig.value.sounds.length > 0
 })
 
+/**
+ * speaking 函数：播放音频并根据音频强度控制Live2D模型的嘴部动画
+ * 实现原理：通过Web Audio API分析音频频率数据，将音量强度映射到嘴部开合程度
+ */
 const speaking = async () => {
-  const response = await fetch(audioFile);
-  const audioData = await response.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(audioData);
-  const source = audioContext.createBufferSource();
-  const analyser = audioContext.createAnalyser();
-  source.buffer = audioBuffer;
-  analyser.connect(audioContext.destination)
-  source.connect(analyser)
-  source.start();
-  
-  const updateMouth = () => {
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(dataArray);
-    const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-    const mouthOpen = Math.min(1, volume / 50);
-    model.internalModel.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthOpen);
-    if ( audioContext.state !== 'close') {
-      requestAnimationFrame(updateMouth)
+  try {
+    // === 第一步：获取音频文件 ===
+    // 从服务器获取音频文件，audioFile.value 是音频文件的URL路径
+    const response = await fetch(audioFile.value);
+
+    // 检查HTTP请求是否成功（状态码200-299）
+    if (!response.ok) {
+      // 如果请求失败，抛出错误并包含状态码信息
+      throw new Error(`Failed to fetch audio: ${response.status}`);
     }
+
+    // === 第二步：处理音频数据 ===
+    // 将HTTP响应转换为ArrayBuffer（二进制数据格式）
+    const audioData = await response.arrayBuffer();
+
+    // 使用Web Audio API解码音频数据，转换为AudioBuffer对象
+    // AudioBuffer包含了音频的采样率、声道数、音频样本等信息
+    const audioBuffer = await audioContext.decodeAudioData(audioData);
+
+    // 创建音频源节点，用于播放音频
+    const source = audioContext.createBufferSource();
+
+    // 创建分析器节点，用于分析音频的频率和音量数据
+    const analyser = audioContext.createAnalyser();
+
+    // === 第三步：配置音频分析器 ===
+    // 设置FFT（快速傅里叶变换）的大小为256
+    // FFT用于将时域信号转换为频域信号，256表示分析的频率分辨率
+    // 值越大分析越精细，但计算量也越大
+    analyser.fftSize = 256;
+
+    // 设置平滑时间常数为0.8（范围0-1）
+    // 用于平滑音频分析数据，避免数值跳动过于剧烈
+    // 值越大平滑效果越强，嘴部动画越柔和
+    analyser.smoothingTimeConstant = 0.8;
+
+    // === 第四步：连接音频节点 ===
+    // 将解码后的音频数据设置到音频源节点
+    source.buffer = audioBuffer;
+
+    // 连接音频流：音频源 → 分析器 → 音频输出
+    // 这样音频既能播放出来，又能被分析器实时分析
+    source.connect(analyser);           // 音频源连接到分析器
+    analyser.connect(audioContext.destination);  // 分析器连接到音频输出（扬声器）
+
+    // === 第五步：设置播放状态管理 ===
+    // 播放状态标志，用于控制嘴部动画循环
+    let isPlaying = true;
+
+    // 监听音频播放结束事件
+    source.onended = () => {
+      // 音频播放结束时，停止嘴部动画
+      isPlaying = false;
+
+      // 重置Live2D模型的嘴部参数到默认状态（闭嘴）
+      if (model && model.internalModel && model.internalModel.coreModel) {
+        try {
+          // 将嘴部开合参数设置为0（完全闭合）
+          model.internalModel.coreModel.setParameterValueById('ParamMouthOpenY', 0);
+        } catch (paramError) {
+          // 如果参数设置失败，记录警告但不中断程序
+          console.warn('重置嘴部参数失败:', paramError);
+        }
+      }
+    };
+
+    // === 第六步：开始播放音频 ===
+    source.start();
+
+    // === 第七步：定义嘴部动画更新函数 ===
+    const updateMouth = () => {
+      // 检查是否应该继续更新动画
+      // 条件：音频还在播放 && 音频上下文正在运行 && 模型存在
+      if (!isPlaying || audioContext.state !== 'running' || !model) {
+        return; // 如果任一条件不满足，停止动画更新
+      }
+
+      try {
+        // === 音频分析部分 ===
+        // 创建数组来存储频率数据，大小为分析器的频率分辨率的一半
+        // analyser.frequencyBinCount = analyser.fftSize / 2 = 128
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        // 获取当前音频的频率数据（0-255的整数值）
+        // 每个元素代表一个频率范围的音量强度
+        analyser.getByteFrequencyData(dataArray);
+
+        // 计算平均音量：将所有频率的音量相加后除以频率数量
+        // reduce((a, b) => a + b, 0) 计算数组所有元素的和
+        const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+        // 将音量映射到嘴部开合程度（0-1之间）
+        // volume / 50：将音量缩放到合适的范围
+        // Math.min(1, ...)：确保值不超过1（完全张开）
+        const mouthOpen = Math.min(1, volume / 50);
+
+        // === Live2D参数更新部分 ===
+        // 使用Live2D Core API设置嘴部开合参数
+        // 'ParamMouthOpenY'：Live2D标准的嘴部垂直开合参数名
+        // mouthOpen：计算出的开合程度（0=闭合，1=完全张开）
+        model.internalModel.coreModel.setParameterValueById('ParamMouthOpenY', mouthOpen);
+
+        // === 动画循环部分 ===
+        // 请求下一帧动画更新（通常60FPS）
+        // 这样就形成了连续的动画循环
+        requestAnimationFrame(updateMouth);
+
+      } catch (error) {
+        // 如果更新过程中出现错误，记录错误并停止动画
+        console.error('更新嘴部动画失败:', error);
+        isPlaying = false; // 停止动画循环
+      }
+    };
+
+    // === 第八步：启动嘴部动画 ===
+    // 开始第一次动画更新，后续通过requestAnimationFrame循环调用
+    updateMouth();
+
+  } catch (error) {
+    // 捕获整个函数执行过程中的任何错误
+    console.error('音频播放和嘴部同步失败:', error);
   }
-  updateMouth();
 }
 
 onMounted(async () => {
@@ -1015,6 +1120,8 @@ function formatTime(seconds) {
         height="600"
       ></canvas>
     </div>
+    
+    
 
     <!-- 控制面板 -->
     <div class="control-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
