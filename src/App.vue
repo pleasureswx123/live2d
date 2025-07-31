@@ -194,10 +194,131 @@ const audioProgress = ref(0)
 const audioDuration = ref(0)
 const audioCurrentTime = ref(0)
 
+// ==================== 口型同步相关状态 ====================
+
+/**
+ * 口型同步播放状态
+ * - true: 正在进行口型同步（音频播放中，嘴部动画运行中）
+ * - false: 口型同步待机状态（未播放音频，嘴部参数为默认值）
+ * 用于控制UI按钮状态和防止重复启动口型同步
+ */
+const isSpeaking = ref(false)
+
+/**
+ * 口型同步敏感度设置 (范围: 10-100)
+ * 控制音频音量到嘴部开合程度的映射比例
+ * - 值越小(10): 敏感度越低，需要更大的音量才能张开嘴巴
+ * - 值越大(100): 敏感度越高，较小的音量就能产生明显的嘴部动作
+ * 计算公式: mouthOpen = Math.min(1, volume / lipSyncSensitivity.value)
+ */
+const lipSyncSensitivity = ref(80)
+
+/**
+ * 当前音频上下文对象 (Web Audio API)
+ * 用于音频解码、播放和实时分析
+ * - null: 未初始化或已关闭
+ * - AudioContext: 活跃的音频上下文，可以处理音频操作
+ * 在startSpeaking时创建，在stopSpeaking时可能保留以便复用
+ */
+let currentAudioContext = null
+
+/**
+ * 当前音频源节点 (AudioBufferSource)
+ * Web Audio API中用于播放音频缓冲区的节点
+ * - null: 没有正在播放的音频
+ * - AudioBufferSource: 正在播放的音频源，可以用于停止播放
+ * 每次播放新音频时都会创建新的源节点（AudioBufferSource只能使用一次）
+ */
+let currentAudioSource = null
+
+/**
+ * 口型同步动画帧ID
+ * requestAnimationFrame返回的ID，用于控制60FPS的嘴部动画循环
+ * - null: 没有正在运行的动画循环
+ * - number: 活跃的动画帧ID，可以用cancelAnimationFrame取消
+ * 用于在停止口型同步时取消动画循环，避免不必要的计算
+ */
+let lipSyncAnimationId = null
+
 // 计算属性：当前模型是否支持音频
 const hasAudioSupport = computed(() => {
   return currentConfig.value.sounds && currentConfig.value.sounds.length > 0
 })
+
+/**
+ * 获取当前Live2D模型支持的嘴部参数列表
+ *
+ * 功能说明:
+ * - 动态检测模型支持的口型参数，确保跨版本兼容性
+ * - 支持Cubism 2.x和4.x的不同参数命名规范
+ * - 支持基础口型参数和高级元音参数
+ *
+ * 参数类型说明:
+ * 1. 基础口型参数:
+ *    - ParamMouthOpenY/PARAM_MOUTH_OPEN_Y: 嘴部垂直开合程度 (0=闭合, 1=完全张开)
+ *    - ParamMouthForm/PARAM_MOUTH_FORM: 嘴部形状变化 (影响嘴角和嘴唇形状)
+ *
+ * 2. 高级元音参数 (用于精细口型同步):
+ *    - ParamA: 元音"啊"的口型 (大张口，适合低频/大音量)
+ *    - ParamI: 元音"咿"的口型 (横向拉伸，适合高频)
+ *    - ParamU: 元音"呜"的口型 (嘴唇前突，适合中低频)
+ *    - ParamE: 元音"诶"的口型 (中等开口，适合中频)
+ *    - ParamO: 元音"哦"的口型 (圆形开口，适合中低频)
+ *
+ * @returns {string[]} 模型支持的嘴部参数名称数组
+ */
+function getMouthParameters() {
+  // 检查模型是否已加载
+  if (!model || !model.internalModel) {
+    console.warn('模型未加载，无法获取嘴部参数')
+    return []
+  }
+
+  const supportedParams = []
+  const coreModel = model.internalModel.coreModel
+
+  // 定义所有可能的嘴部参数名称
+  // 按照优先级排序：基础参数 -> 高级元音参数
+  const commonMouthParams = [
+    // === Cubism 4.x 标准参数 ===
+    'ParamMouthOpenY',     // 嘴部垂直开合 (主要参数)
+    'ParamMouthForm',      // 嘴部形状变化 (辅助参数)
+
+    // === Cubism 2.x 兼容参数 ===
+    'PARAM_MOUTH_OPEN_Y',  // 嘴部垂直开合 (旧版本)
+    'PARAM_MOUTH_FORM',    // 嘴部形状变化 (旧版本)
+
+    // === 高级口型同步参数 (元音系统) ===
+    // 这些参数通常用于专业的口型同步模型，如Kei Vowels Pro
+    'ParamA',  // 元音A - 大开口，适合表现强烈的声音
+    'ParamI',  // 元音I - 横向拉伸，适合表现尖锐的声音
+    'ParamU',  // 元音U - 嘴唇前突，适合表现低沉的声音
+    'ParamE',  // 元音E - 中等开口，适合表现中性的声音
+    'ParamO'   // 元音O - 圆形开口，适合表现圆润的声音
+  ]
+
+  // 逐个检查参数是否存在于当前模型中
+  for (const paramName of commonMouthParams) {
+    try {
+      // 尝试获取参数的当前值来验证参数是否存在
+      // 如果参数不存在，getParameterValueById会抛出异常或返回undefined
+      const value = coreModel.getParameterValueById(paramName)
+
+      // 只有当参数确实存在且有有效值时才添加到支持列表
+      if (value !== undefined && value !== null) {
+        supportedParams.push(paramName)
+      }
+    } catch (error) {
+      // 参数不存在于当前模型中，静默忽略
+      // 这是正常情况，因为不同模型支持的参数集合不同
+    }
+  }
+
+  // 输出检测结果，便于调试和了解模型能力
+  console.log(`模型支持的嘴部参数 (${supportedParams.length}个):`, supportedParams)
+
+  return supportedParams
+}
 
 /**
  * speaking 函数：播放音频并根据音频强度控制Live2D模型的嘴部动画
@@ -205,6 +326,18 @@ const hasAudioSupport = computed(() => {
  */
 const speaking = async () => {
   try {
+    // === 第0步：检查模型和获取支持的嘴部参数 ===
+    if (!model || !isModelLoaded.value) {
+      throw new Error('模型未加载')
+    }
+
+    const mouthParams = getMouthParameters()
+    if (mouthParams.length === 0) {
+      throw new Error('当前模型不支持嘴部参数控制')
+    }
+
+    console.log(`开始口型同步，支持的参数: ${mouthParams.join(', ')}`)
+
     // === 第一步：获取音频文件 ===
     // 从服务器获取音频文件，audioFile.value 是音频文件的URL路径
     const response = await fetch(audioFile.value);
@@ -221,13 +354,14 @@ const speaking = async () => {
 
     // 使用Web Audio API解码音频数据，转换为AudioBuffer对象
     // AudioBuffer包含了音频的采样率、声道数、音频样本等信息
-    const audioBuffer = await audioContext.decodeAudioData(audioData);
+    const audioBuffer = await currentAudioContext.decodeAudioData(audioData);
 
     // 创建音频源节点，用于播放音频
-    const source = audioContext.createBufferSource();
+    const source = currentAudioContext.createBufferSource();
+    currentAudioSource = source // 保存引用以便停止
 
     // 创建分析器节点，用于分析音频的频率和音量数据
-    const analyser = audioContext.createAnalyser();
+    const analyser = currentAudioContext.createAnalyser();
 
     // === 第三步：配置音频分析器 ===
     // 设置FFT（快速傅里叶变换）的大小为256
@@ -247,7 +381,7 @@ const speaking = async () => {
     // 连接音频流：音频源 → 分析器 → 音频输出
     // 这样音频既能播放出来，又能被分析器实时分析
     source.connect(analyser);           // 音频源连接到分析器
-    analyser.connect(audioContext.destination);  // 分析器连接到音频输出（扬声器）
+    analyser.connect(currentAudioContext.destination);  // 分析器连接到音频输出（扬声器）
 
     // === 第五步：设置播放状态管理 ===
     // 播放状态标志，用于控制嘴部动画循环
@@ -257,12 +391,16 @@ const speaking = async () => {
     source.onended = () => {
       // 音频播放结束时，停止嘴部动画
       isPlaying = false;
+      isSpeaking.value = false;
 
       // 重置Live2D模型的嘴部参数到默认状态（闭嘴）
       if (model && model.internalModel && model.internalModel.coreModel) {
         try {
-          // 将嘴部开合参数设置为0（完全闭合）
-          model.internalModel.coreModel.setParameterValueById('ParamMouthOpenY', 0);
+          // 重置所有支持的嘴部参数到默认值
+          for (const paramName of mouthParams) {
+            model.internalModel.coreModel.setParameterValueById(paramName, 0);
+          }
+          console.log('嘴部参数已重置到默认状态')
         } catch (paramError) {
           // 如果参数设置失败，记录警告但不中断程序
           console.warn('重置嘴部参数失败:', paramError);
@@ -276,40 +414,132 @@ const speaking = async () => {
     // === 第七步：定义嘴部动画更新函数 ===
     const updateMouth = () => {
       // 检查是否应该继续更新动画
-      // 条件：音频还在播放 && 音频上下文正在运行 && 模型存在
-      if (!isPlaying || audioContext.state !== 'running' || !model) {
+      // 条件：音频还在播放 && 音频上下文正在运行 && 模型存在 && 用户没有手动停止
+      if (!isPlaying || currentAudioContext.state !== 'running' || !model || !isSpeaking.value) {
         return; // 如果任一条件不满足，停止动画更新
       }
 
       try {
-        // === 音频分析部分 ===
-        // 创建数组来存储频率数据，大小为分析器的频率分辨率的一半
-        // analyser.frequencyBinCount = analyser.fftSize / 2 = 128
+        // === 实时音频分析部分 ===
+        //
+        // 技术原理:
+        // 使用Web Audio API的AnalyserNode进行实时频谱分析
+        // 通过FFT(快速傅里叶变换)将时域音频信号转换为频域数据
+        // 分析不同频率范围的能量分布，计算整体音量强度
+
+        // 第1步: 创建频率数据存储数组
+        // 数组大小 = analyser.frequencyBinCount = analyser.fftSize / 2
+        // 当前配置: fftSize=256, 所以 frequencyBinCount=128
+        // 每个元素代表一个频率区间的能量值(0-255)
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-        // 获取当前音频的频率数据（0-255的整数值）
-        // 每个元素代表一个频率范围的音量强度
+        // 第2步: 获取当前帧的频率域数据
+        // getByteFrequencyData(): 获取实时的频率能量分布
+        // 返回值范围: 0-255 (8位无符号整数)
+        // 数组索引对应频率: index * (sampleRate/2) / frequencyBinCount
+        // 例如: 44.1kHz采样率下，index=1对应约172Hz
         analyser.getByteFrequencyData(dataArray);
 
-        // 计算平均音量：将所有频率的音量相加后除以频率数量
-        // reduce((a, b) => a + b, 0) 计算数组所有元素的和
+        // 第3步: 计算整体音量强度
+        // 方法: 对所有频率区间的能量值求平均
+        // reduce((a, b) => a + b, 0): 累加所有频率能量
+        // 除以数组长度: 得到平均能量值 (0-255)
+        //
+        // 优化空间: 可以考虑加权平均，重点关注人声频率范围(85Hz-255Hz)
         const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
 
-        // 将音量映射到嘴部开合程度（0-1之间）
-        // volume / 50：将音量缩放到合适的范围
-        // Math.min(1, ...)：确保值不超过1（完全张开）
-        const mouthOpen = Math.min(1, volume / 50);
+        // 第4步: 音量到口型的智能映射
+        //
+        // 映射公式: mouthOpen = min(1, volume / sensitivity)
+        //
+        // 参数说明:
+        // - volume: 当前音量强度 (0-255)
+        // - sensitivity: 用户设置的敏感度 (10-100)
+        // - mouthOpen: 最终的嘴部开合程度 (0-1)
+        //
+        // 敏感度效果:
+        // - 低敏感度(10): 需要很大音量才能张嘴，适合嘈杂环境
+        // - 中敏感度(50): 平衡的响应，适合一般语音
+        // - 高敏感度(100): 轻微声音就有反应，适合安静环境
+        //
+        // Math.min(1, ...): 确保结果不超过1，防止过度张嘴
+        const sensitivityFactor = lipSyncSensitivity.value
+        const mouthOpen = Math.min(1, volume / sensitivityFactor);
+
+        // 调试信息 (可选，在开发时启用)
+        // console.log(`音量: ${volume.toFixed(1)}, 敏感度: ${sensitivityFactor}, 开口度: ${mouthOpen.toFixed(3)}`);
 
         // === Live2D参数更新部分 ===
-        // 使用Live2D Core API设置嘴部开合参数
-        // 'ParamMouthOpenY'：Live2D标准的嘴部垂直开合参数名
-        // mouthOpen：计算出的开合程度（0=闭合，1=完全张开）
-        model.internalModel.coreModel.setParameterValueById('ParamMouthOpenY', mouthOpen);
+        // 智能口型映射系统：根据参数类型和音频特征进行差异化处理
+        //
+        // 设计理念:
+        // 1. 不同类型的参数有不同的表现特点和适用场景
+        // 2. 通过系数调整实现更自然的口型变化
+        // 3. 支持多参数协同工作，创造丰富的口型表现
+        //
+        // 映射策略:
+        // - 基础参数: 直接映射，提供主要的开合动作
+        // - 形状参数: 减半映射，提供细微的形状变化
+        // - 元音参数: 分层映射，模拟不同发音的口型特征
+
+        for (const paramName of mouthParams) {
+          try {
+            // === 基础嘴部开合参数 ===
+            if (paramName.includes('MouthOpen') || paramName.includes('MOUTH_OPEN')) {
+              // 主要的嘴部垂直开合控制
+              // 系数: 1.0 (完整映射)
+              // 作用: 控制嘴巴张开的程度，是最重要的口型参数
+              // 适用: 所有类型的音频，提供基础的开合动作
+              model.internalModel.coreModel.setParameterValueById(paramName, mouthOpen);
+
+            } else if (paramName.includes('MouthForm') || paramName.includes('MOUTH_FORM')) {
+              // 嘴部形状和轮廓控制
+              // 系数: 0.5 (减半映射)
+              // 作用: 控制嘴唇形状、嘴角位置等细节
+              // 适用: 提供更细腻的口型变化，避免过度夸张
+              model.internalModel.coreModel.setParameterValueById(paramName, mouthOpen * 0.5);
+
+            // === 高级元音参数系统 ===
+            } else if (paramName === 'ParamA') {
+              // 元音"A"(/a/) - 大开口音
+              // 系数: 0.8 (强映射)
+              // 特征: 嘴巴大张，舌位低，适合表现强烈、响亮的声音
+              // 音频特征: 通常对应较大的音量和较低的频率
+              // 使用场景: 歌唱中的高音、感叹词、强调音节
+              model.internalModel.coreModel.setParameterValueById(paramName, mouthOpen * 0.8);
+
+            } else if (['ParamI', 'ParamE'].includes(paramName)) {
+              // 元音"I"(/i/)和"E"(/e/) - 中高位音
+              // 系数: 0.6 (中等映射)
+              // 特征:
+              //   - ParamI: 嘴角向两侧拉伸，嘴型较扁，舌位高
+              //   - ParamE: 嘴型介于I和A之间，舌位中高
+              // 音频特征: 通常对应中等音量和中高频率
+              // 使用场景: 日常对话、清晰发音、中等强度的表达
+              model.internalModel.coreModel.setParameterValueById(paramName, mouthOpen * 0.6);
+
+            } else if (['ParamU', 'ParamO'].includes(paramName)) {
+              // 元音"U"(/u/)和"O"(/o/) - 圆唇音
+              // 系数: 0.4 (轻映射)
+              // 特征:
+              //   - ParamU: 嘴唇前突成圆形，开口最小，舌位高后
+              //   - ParamO: 嘴唇圆形，开口中等，舌位中后
+              // 音频特征: 通常对应较小的音量和较低的频率
+              // 使用场景: 轻柔的语调、低声细语、温柔的表达
+              model.internalModel.coreModel.setParameterValueById(paramName, mouthOpen * 0.4);
+            }
+
+          } catch (paramError) {
+            // 参数设置失败处理
+            // 可能原因: 参数超出范围、模型状态异常、API调用错误
+            console.warn(`设置参数 ${paramName} 失败:`, paramError);
+          }
+        }
 
         // === 动画循环部分 ===
         // 请求下一帧动画更新（通常60FPS）
         // 这样就形成了连续的动画循环
-        requestAnimationFrame(updateMouth);
+        lipSyncAnimationId = requestAnimationFrame(updateMouth);
 
       } catch (error) {
         // 如果更新过程中出现错误，记录错误并停止动画
@@ -325,6 +555,168 @@ const speaking = async () => {
   } catch (error) {
     // 捕获整个函数执行过程中的任何错误
     console.error('音频播放和嘴部同步失败:', error);
+    // 确保状态重置
+    isSpeaking.value = false
+  }
+}
+
+/**
+ * 开始说话：启动口型同步功能
+ *
+ * 功能流程:
+ * 1. 检查当前状态，防止重复启动
+ * 2. 验证音频文件是否可用
+ * 3. 初始化或恢复Web Audio API上下文
+ * 4. 调用speaking函数开始实际的音频播放和口型同步
+ *
+ * 状态管理:
+ * - 设置isSpeaking为true，更新UI状态
+ * - 创建或复用AudioContext
+ * - 处理浏览器的音频策略限制
+ *
+ * 错误处理:
+ * - 防止重复启动
+ * - 验证必要条件
+ * - 异常时自动重置状态
+ */
+async function startSpeaking() {
+  // === 第一步：状态检查和验证 ===
+
+  // 防止重复启动口型同步
+  if (isSpeaking.value) {
+    console.warn('已经在说话中，请先停止当前的口型同步')
+    return
+  }
+
+  // 检查音频文件是否已正确加载
+  if (!audioFile.value) {
+    console.error('没有可用的音频文件')
+    return
+  }
+
+  try {
+    console.log('开始口型同步...')
+
+    // === 第二步：更新状态 ===
+    // 立即设置为说话状态，更新UI显示
+    isSpeaking.value = true
+
+    // === 第三步：音频上下文管理 ===
+
+    // 创建新的音频上下文（如果不存在或已关闭）
+    // AudioContext是Web Audio API的核心，管理所有音频操作
+    if (!currentAudioContext || currentAudioContext.state === 'closed') {
+      currentAudioContext = new AudioContext()
+      console.log('创建新的AudioContext')
+    }
+
+    // 处理浏览器音频策略限制
+    // 现代浏览器要求用户交互后才能播放音频，可能导致AudioContext被暂停
+    if (currentAudioContext.state === 'suspended') {
+      await currentAudioContext.resume()
+      console.log('恢复被暂停的AudioContext')
+    }
+
+    // === 第四步：启动口型同步 ===
+    // 调用speaking函数开始实际的音频播放和嘴部动画
+    await speaking()
+
+  } catch (error) {
+    // === 错误处理 ===
+    console.error('启动口型同步失败:', error)
+
+    // 发生错误时重置状态，确保UI正确显示
+    isSpeaking.value = false
+
+    // 可以在这里添加用户友好的错误提示
+    // 例如：显示Toast消息或更新UI错误状态
+  }
+}
+
+/**
+ * 停止说话：停止口型同步功能
+ *
+ * 功能说明:
+ * 完全停止当前的口型同步，包括音频播放、动画循环和参数重置
+ * 确保所有相关资源被正确清理，避免内存泄漏和状态混乱
+ *
+ * 清理步骤:
+ * 1. 停止音频播放 (AudioBufferSource)
+ * 2. 取消动画循环 (requestAnimationFrame)
+ * 3. 重置所有嘴部参数到默认值
+ * 4. 更新UI状态
+ *
+ * 安全性:
+ * - 每个步骤都有独立的错误处理
+ * - 即使部分步骤失败，也会继续执行其他清理操作
+ * - 最终确保状态被重置
+ */
+function stopSpeaking() {
+  try {
+    console.log('停止口型同步...')
+
+    // === 第一步：停止音频播放 ===
+    if (currentAudioSource) {
+      try {
+        // 停止当前正在播放的音频源
+        // AudioBufferSource.stop()会立即停止音频播放
+        currentAudioSource.stop()
+        console.log('音频播放已停止')
+      } catch (audioError) {
+        // 音频可能已经自然结束，忽略停止错误
+        console.warn('停止音频时出现错误:', audioError)
+      }
+
+      // 清除音频源引用，释放资源
+      // AudioBufferSource是一次性的，停止后不能重用
+      currentAudioSource = null
+    }
+
+    // === 第二步：取消动画循环 ===
+    if (lipSyncAnimationId) {
+      // 取消requestAnimationFrame循环，停止嘴部动画更新
+      cancelAnimationFrame(lipSyncAnimationId)
+      lipSyncAnimationId = null
+      console.log('动画循环已取消')
+    }
+
+    // === 第三步：重置嘴部参数 ===
+    if (model && model.internalModel && model.internalModel.coreModel) {
+      // 获取当前模型支持的所有嘴部参数
+      const mouthParams = getMouthParameters()
+
+      // 将所有嘴部参数重置为默认值(0)
+      // 这样模型的嘴巴会回到闭合状态
+      for (const paramName of mouthParams) {
+        try {
+          model.internalModel.coreModel.setParameterValueById(paramName, 0)
+        } catch (paramError) {
+          // 某些参数可能在特定状态下无法设置，记录警告但继续
+          console.warn(`重置参数 ${paramName} 失败:`, paramError)
+        }
+      }
+      console.log(`已重置 ${mouthParams.length} 个嘴部参数`)
+    }
+
+    // === 第四步：更新UI状态 ===
+    // 重置说话状态，这会触发UI更新
+    // - "开始说话"按钮变为可用
+    // - "停止说话"按钮变为禁用
+    // - 状态显示变为"待机中"
+    isSpeaking.value = false
+
+    console.log('口型同步已完全停止')
+
+  } catch (error) {
+    // === 全局错误处理 ===
+    console.error('停止口型同步失败:', error)
+
+    // 即使出现错误，也要强制重置状态
+    // 确保UI不会卡在"正在说话"状态
+    isSpeaking.value = false
+
+    // 在生产环境中，可以在这里添加用户通知
+    // 例如：显示"停止时出现问题，但已强制重置"的消息
   }
 }
 
@@ -1315,6 +1707,155 @@ function formatTime(seconds) {
         <p style="margin: 0; color: #6c757d; font-size: 14px; text-align: center;">
           当前模型不支持音频功能
         </p>
+      </div>
+
+      <!--
+        口型同步控制面板
+
+        功能说明:
+        - 提供口型同步功能的用户界面
+        - 支持开始/停止口型同步
+        - 提供敏感度调节功能
+        - 显示实时状态信息
+
+        设计特点:
+        - 独立的功能区域，与其他控制分离
+        - 清晰的视觉层次和状态反馈
+        - 响应式的按钮状态管理
+        - 用户友好的参数调节界面
+      -->
+      <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f0f8ff; margin-top: 15px;">
+        <h4 style="margin: 0 0 15px 0; color: #333;">🗣️ 口型同步测试</h4>
+
+        <!-- 音频文件信息显示 -->
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">测试音频:</label>
+          <!-- 动态显示音频文件状态，帮助用户了解当前可用的音频资源 -->
+          <span style="color: #666; font-size: 14px;">{{ audioFile ? 'test.wav (内置测试音频)' : '未加载音频文件' }}</span>
+        </div>
+
+        <!--
+          口型同步控制按钮组
+
+          设计原则:
+          - 双按钮设计：开始/停止，状态互斥
+          - 智能禁用：根据系统状态自动启用/禁用
+          - 视觉反馈：通过透明度和文字变化提供状态反馈
+          - 防误操作：严格的状态检查防止重复操作
+        -->
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <!--
+            开始说话按钮
+
+            启用条件 (所有条件必须同时满足):
+            - model: Live2D模型已加载
+            - isModelLoaded: 模型加载完成标志
+            - !isSpeaking: 当前未在进行口型同步
+            - audioFile: 音频文件已正确加载
+
+            状态变化:
+            - 待机时: "🎤 开始说话" (绿色，可点击)
+            - 运行时: "正在说话..." (灰色，禁用)
+            - 异常时: 禁用状态 (半透明)
+          -->
+          <button
+            @click="startSpeaking"
+            :disabled="!model || !isModelLoaded || isSpeaking || !audioFile"
+            style="flex: 1; padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;"
+            :style="{ opacity: (!model || !isModelLoaded || isSpeaking || !audioFile) ? 0.5 : 1 }"
+          >
+            {{ isSpeaking ? '正在说话...' : '🎤 开始说话' }}
+          </button>
+
+          <!--
+            停止说话按钮
+
+            启用条件:
+            - isSpeaking: 当前正在进行口型同步
+
+            功能:
+            - 立即停止音频播放
+            - 取消动画循环
+            - 重置所有嘴部参数
+            - 更新UI状态
+
+            状态变化:
+            - 运行时: "🛑 停止说话" (红色，可点击)
+            - 待机时: 禁用状态 (半透明)
+          -->
+          <button
+            @click="stopSpeaking"
+            :disabled="!isSpeaking"
+            style="flex: 1; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;"
+            :style="{ opacity: !isSpeaking ? 0.5 : 1 }"
+          >
+            🛑 停止说话
+          </button>
+        </div>
+
+        <!--
+          口型敏感度调节控制
+
+          功能说明:
+          - 允许用户实时调节口型同步的敏感度
+          - 范围: 10-100，步长: 5
+          - 实时生效，无需重启口型同步
+
+          敏感度效果:
+          - 10 (低敏感度): 需要很大音量才能张嘴，适合嘈杂环境或响亮音频
+          - 50 (中等敏感度): 平衡的响应，适合一般语音和音乐
+          - 100 (高敏感度): 轻微声音就有反应，适合安静环境或轻柔音频
+
+          技术实现:
+          - 双向绑定到 lipSyncSensitivity 响应式变量
+          - 在音频分析中作为除数使用: mouthOpen = volume / sensitivity
+          - 实时更新，立即影响口型计算
+        -->
+        <div style="margin-bottom: 10px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">
+            口型敏感度: {{ lipSyncSensitivity }}
+          </label>
+          <input
+            type="range"
+            min="10"
+            max="100"
+            step="5"
+            v-model="lipSyncSensitivity"
+            style="width: 100%;"
+          >
+          <!-- 敏感度范围提示，帮助用户理解调节方向 -->
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 2px;">
+            <span>低敏感度</span>
+            <span>高敏感度</span>
+          </div>
+        </div>
+
+        <!--
+          口型同步状态指示器
+
+          功能说明:
+          - 实时显示当前口型同步的工作状态
+          - 提供清晰的视觉反馈
+          - 帮助用户了解系统当前状态
+
+          状态类型:
+          - 运行状态: "🎙️ 正在分析音频并同步口型" (绿色)
+            * 表示音频正在播放，嘴部动画正在运行
+            * 系统正在实时分析音频并更新Live2D参数
+
+          - 待机状态: "💤 口型同步待机中" (灰色)
+            * 表示系统空闲，等待用户启动口型同步
+            * 所有嘴部参数处于默认状态
+
+          设计特点:
+          - 使用表情符号增强视觉识别
+          - 颜色编码：绿色=活跃，灰色=待机
+          - 居中显示，突出状态信息
+        -->
+        <div style="text-align: center; font-size: 12px; color: #666;">
+          <span v-if="isSpeaking" style="color: #28a745;">🎙️ 正在分析音频并同步口型</span>
+          <span v-else style="color: #6c757d;">💤 口型同步待机中</span>
+        </div>
       </div>
     </div>
 
