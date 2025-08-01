@@ -15,7 +15,7 @@
     <div
       class="floating-controls"
       :class="{ 'visible': showControls, 'expanded': showControls }"
-      @mouseenter="showControls = true"
+      @mouseenter="handleMouseEnter"
       @mouseleave="handleMouseLeave"
     >
       <!-- 主控制按钮 -->
@@ -29,7 +29,11 @@
       </div>
 
       <!-- 快速控制按钮组 -->
-      <div class="quick-controls no-drag" v-show="showControls">
+      <div
+        class="quick-controls no-drag"
+        v-show="showControls"
+        @mouseenter="handleMouseEnter"
+      >
         <button
           class="control-btn no-drag"
           @click="toggleExpressionsPanel"
@@ -100,6 +104,7 @@
             <option value="natori">Natori</option>
             <option value="kei_basic">Kei Basic</option>
             <option value="kei_vowels">Kei Vowels Pro</option>
+            <option value="youyou">悠悠</option>
           </select>
         </div>
 
@@ -401,6 +406,7 @@ const isPositionLocked = ref(false)
 
 const contextMenuPosition = ref({ x: 0, y: 0 })
 const controlsHideTimer = ref(null)
+const isMouseOverControls = ref(false)
 
 // === 计算属性 ===
 const panelStyle = computed(() => ({
@@ -495,12 +501,49 @@ function hideOtherPanels(except) {
 }
 
 /**
+ * 处理鼠标进入控制区域
+ */
+function handleMouseEnter() {
+  isMouseOverControls.value = true
+
+  // 清除隐藏计时器
+  if (controlsHideTimer.value) {
+    clearTimeout(controlsHideTimer.value)
+    controlsHideTimer.value = null
+  }
+
+  // 显示控制按钮
+  showControls.value = true
+}
+
+/**
  * 处理鼠标离开控制区域
  */
-function handleMouseLeave() {
+function handleMouseLeave(event) {
+  isMouseOverControls.value = false
+
+  // 检查鼠标是否移动到子元素
+  const relatedTarget = event.relatedTarget
+  const currentTarget = event.currentTarget
+
+  // 如果鼠标移动到当前元素的子元素，不隐藏控制面板
+  if (relatedTarget && currentTarget && currentTarget.contains(relatedTarget)) {
+    return
+  }
+
+  // 清除之前的计时器（如果存在）
+  if (controlsHideTimer.value) {
+    clearTimeout(controlsHideTimer.value)
+  }
+
+  // 使用较短的延迟，但检查鼠标状态
   controlsHideTimer.value = setTimeout(() => {
-    showControls.value = false
-  }, 1000) // 1秒后隐藏
+    // 再次检查鼠标是否还在控制区域内
+    if (!isMouseOverControls.value) {
+      showControls.value = false
+    }
+    controlsHideTimer.value = null
+  }, 300) // 300ms延迟，更快响应
 }
 
 /**
@@ -1196,6 +1239,8 @@ defineExpose({
   flex-direction: column;
   gap: 6px;
   margin-top: 8px;
+  /* 确保鼠标事件正常工作 */
+  pointer-events: auto;
 }
 
 .quick-controls .control-btn {

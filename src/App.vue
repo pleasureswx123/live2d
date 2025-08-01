@@ -185,6 +185,42 @@ const modelConfigs = {
       { name: '韩语音频', file: 'sounds/01_kei_ko.wav' },
       { name: '中文音频', file: 'sounds/01_kei_zh.wav' }
     ]
+  },
+  youyou: {
+    name: '悠悠',
+    path: '/models/youyou/youyou.model3.json',
+    motions: [
+      { name: '基础动画', file: 'jichudonghua.motion3.json', group: 'Idle', index: 0 },
+      { name: '睡眠', file: 'sleep.motion3.json', group: 'Idle', index: 1 },
+      { name: '挥手', file: 'huishou.motion3.json', group: 'TapBody', index: 0 },
+      { name: '点头', file: 'diantou.motion3.json', group: 'TapBody', index: 1 },
+      { name: '摇头', file: 'yaotou.motion3.json', group: 'TapBody', index: 2 },
+      { name: '眼珠子', file: 'yanzhuzi.motion3.json', group: 'TapHead', index: 0 },
+      { name: '睡觉', file: 'shuijiao.motion3.json', group: 'TapHead', index: 1 }
+    ],
+    expressions: [
+      { name: '傲娇', file: 'aojiao.exp3.json', index: 0 },
+      { name: '抱胸', file: 'baoxiong.exp3.json', index: 1 },
+      { name: '叉腰', file: 'chayao.exp3.json', index: 2 },
+      { name: '电脑', file: 'diannao.exp3.json', index: 3 },
+      { name: '电脑发光', file: 'diannaofaguang.exp3.json', index: 4 },
+      { name: '鬼脸', file: 'guilian.exp3.json', index: 5 },
+      { name: '哈哈大笑', file: 'hahadadxiao.exp3.json', index: 6 },
+      { name: '害羞', file: 'haixiu.exp3.json', index: 7 },
+      { name: '挥手表情', file: 'huishou.exp3.json', index: 8 },
+      { name: '键盘抬起', file: 'jianpantaiqi.exp3.json', index: 9 },
+      { name: '惊喜', file: 'jingxi.exp3.json', index: 10 },
+      { name: '惊讶', file: 'jingya.exp3.json', index: 11 },
+      { name: '脸红', file: 'lianhong.exp3.json', index: 12 },
+      { name: '落泪', file: 'luolei.exp3.json', index: 13 },
+      { name: '眯眯眼', file: 'mimiyan.exp3.json', index: 14 },
+      { name: '生气', file: 'shengqi.exp3.json', index: 15 },
+      { name: '托腮', file: 'tuosai.exp3.json', index: 16 },
+      { name: '委屈', file: 'weiqu.exp3.json', index: 17 },
+      { name: '温柔的笑', file: 'wenroudexiao.exp3.json', index: 18 },
+      { name: '眼泪', file: 'yanlei.exp3.json', index: 19 }
+    ],
+    sounds: []
   }
 }
 
@@ -1404,28 +1440,52 @@ async function playMotion() {
                                 Object.keys(model.internalModel.settings.motions).length > 0
 
     if (hasPreDefinedMotions) {
-      // 对于有预定义动作组的模型（如 hibiki, hiyori）
-      // 查找动作在哪个组中
-      const motions = model.internalModel.settings.motions
-      let foundGroup = null
-      let foundIndex = -1
+      // 对于有预定义动作组的模型（如 hibiki, hiyori, youyou）
+      console.log('使用预定义动作组')
+      console.log('可用动作组:', Object.keys(model.internalModel.settings.motions))
 
-      for (const [groupName, motionList] of Object.entries(motions)) {
-        const index = motionList.findIndex(motion => motion.File === selectedMotion.value)
-        if (index !== -1) {
-          foundGroup = groupName
-          foundIndex = index
-          break
+      // 首先尝试从配置中获取组和索引信息
+      const motions = currentConfig.value.motions
+      const selectedMotionData = motions.find(motion => motion.file === selectedMotion.value)
+
+      if (selectedMotionData && selectedMotionData.group && selectedMotionData.index !== undefined) {
+        // 使用配置中的组和索引信息
+        console.log(`使用配置的动作组: ${selectedMotionData.group}, 索引: ${selectedMotionData.index}`)
+        try {
+          await model.motion(selectedMotionData.group, selectedMotionData.index, MotionPriority.NORMAL)
+          console.log('预定义动作播放成功')
+        } catch (error) {
+          console.error('播放预定义动作失败:', error)
+        }
+      } else {
+        // 回退到在模型设置中查找动作
+        const modelMotions = model.internalModel.settings.motions
+        let foundGroup = null
+        let foundIndex = -1
+
+        for (const [groupName, motionList] of Object.entries(modelMotions)) {
+          const index = motionList.findIndex(motion => motion.File === selectedMotion.value)
+          if (index !== -1) {
+            foundGroup = groupName
+            foundIndex = index
+            break
+          }
+        }
+
+        if (foundGroup !== null) {
+          console.log(`在模型中找到动作组: ${foundGroup}, 索引: ${foundIndex}`)
+          await model.motion(foundGroup, foundIndex, MotionPriority.NORMAL)
+        } else {
+          console.warn('在预定义动作组中未找到指定动作，尝试独立文件加载')
+          await loadIndependentMotionFile()
         }
       }
-
-      if (foundGroup !== null) {
-        console.log(`使用预定义动作组: ${foundGroup}, 索引: ${foundIndex}`)
-        await model.motion(foundGroup, foundIndex, MotionPriority.NORMAL)
-      } else {
-        console.warn('在预定义动作组中未找到指定动作')
-      }
     } else {
+      await loadIndependentMotionFile()
+    }
+
+    // 独立文件加载函数
+    async function loadIndependentMotionFile() {
       // 对于只有独立动作文件的模型（如 idol, lanhei）
       // 需要动态加载动作文件
       const motionPath = `/models/${currentModelName.value}/${selectedMotion.value}`
@@ -1450,7 +1510,7 @@ async function playMotion() {
         console.log('独立动作文件播放成功')
       } catch (fetchError) {
         console.error('加载动作文件失败:', fetchError)
-        return
+        throw fetchError
       }
     }
 
@@ -1480,8 +1540,18 @@ async function playMotionFile(motionFile) {
     // 设置选中的动作
     selectedMotion.value = motionFile
 
-    // 调用播放动作函数
-    await playMotion()
+    // 查找动作配置
+    const motions = currentConfig.value.motions
+    const motionConfig = motions.find(motion => motion.file === motionFile)
+
+    if (motionConfig && motionConfig.group && motionConfig.index !== undefined) {
+      // 如果有组和索引信息，直接使用预定义动作
+      console.log(`播放预定义动作: 组=${motionConfig.group}, 索引=${motionConfig.index}`)
+      await model.motion(motionConfig.group, motionConfig.index, MotionPriority.NORMAL)
+    } else {
+      // 否则调用原有的播放动作函数
+      await playMotion()
+    }
   } catch (error) {
     console.error('播放动作文件失败:', error)
   }
@@ -2361,6 +2431,7 @@ function formatTime(seconds) {
           <option value="natori">{{ modelConfigs.natori.name }}</option>
           <option value="kei_basic">{{ modelConfigs.kei_basic.name }}</option>
           <option value="kei_vowels">{{ modelConfigs.kei_vowels.name }}</option>
+          <option value="youyou">{{ modelConfigs.youyou.name }}</option>
         </select>
         <span v-if="!isModelLoaded" style="color: #666; font-size: 14px;">加载中...</span>
         <span v-else style="color: #28a745; font-size: 14px;">✓ 已加载</span>
