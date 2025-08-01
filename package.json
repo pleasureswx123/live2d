@@ -2,7 +2,7 @@
   "name": "live2d-desktop-pet",
   "private": true,
   "version": "1.0.0",
-  "description": "Live2D 桌面宠物应用",
+  "description": "Live2D 桌面模型应用",
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {

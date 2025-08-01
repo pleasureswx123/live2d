@@ -9,7 +9,7 @@ const { spawn } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 
-console.log('🚀 启动Live2D桌面宠物应用（纯桌面模式）...')
+console.log('🚀 启动Live2D桌面模型应用（纯桌面模式）...')
 
 // 检查是否存在构建文件
 const distPath = path.join(__dirname, 'dist')
@@ -17,7 +17,7 @@ const indexPath = path.join(distPath, 'index.html')
 
 if (!fs.existsSync(indexPath)) {
   console.log('📦 首次运行，正在构建应用...')
-  
+
   // 先构建应用
   const buildProcess = spawn('npm', ['run', 'build'], {
     stdio: 'inherit',
@@ -47,7 +47,7 @@ if (!fs.existsSync(indexPath)) {
 function startElectron() {
   // 设置生产模式环境变量
   process.env.NODE_ENV = 'production'
-  
+
   // 启动Electron
   const electronProcess = spawn('electron', ['.'], {
     stdio: 'inherit',

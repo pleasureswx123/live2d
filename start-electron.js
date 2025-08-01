@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 async function startElectronApp() {
-  console.log('🚀 启动 Live2D 桌面宠物应用...')
+  console.log('🚀 启动 Live2D 桌面模型应用...')
 
   // 检查是否安装了 Electron
 try {

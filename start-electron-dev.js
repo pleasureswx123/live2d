@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-console.log('🚀 启动Live2D桌面宠物开发环境...')
+console.log('🚀 启动Live2D桌面模型开发环境...')
 
 let viteProcess = null
 let electronProcess = null
@@ -21,7 +21,7 @@ let electronProcess = null
 // 启动Vite开发服务器
 function startViteServer() {
   console.log('📦 启动Vite开发服务器...')
-  
+
   viteProcess = spawn('npm', ['run', 'dev'], {
     stdio: 'pipe',
     shell: true,
@@ -31,7 +31,7 @@ function startViteServer() {
   viteProcess.stdout.on('data', (data) => {
     const output = data.toString()
     console.log('[Vite]', output.trim())
-    
+
     // 检测服务器启动成功
     if (output.includes('Local:') && output.includes('localhost:5174') && !electronProcess) {
       console.log('✅ Vite服务器启动成功')
@@ -55,16 +55,16 @@ function startViteServer() {
 // 检查服务器是否可用
 function checkServer(url, callback, maxAttempts = 30) {
   let attempts = 0
-  
+
   function check() {
     attempts++
     console.log(`🔍 检查服务器状态 (${attempts}/${maxAttempts})...`)
-    
+
     const req = http.get(url, (res) => {
       console.log('✅ 服务器响应正常')
       callback(true)
     })
-    
+
     req.on('error', (err) => {
       if (attempts >= maxAttempts) {
         console.error('❌ 服务器启动超时')
@@ -73,7 +73,7 @@ function checkServer(url, callback, maxAttempts = 30) {
         setTimeout(check, 1000)
       }
     })
-    
+
     req.setTimeout(1000, () => {
       req.destroy()
       if (attempts >= maxAttempts) {
@@ -84,7 +84,7 @@ function checkServer(url, callback, maxAttempts = 30) {
       }
     })
   }
-  
+
   check()
 }
 

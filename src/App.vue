@@ -2,7 +2,7 @@
 import * as PIXI from 'pixi.js'
 import { Live2DModel, SoundManager, MotionPriority } from 'pixi-live2d-display'
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
-import DesktopPetControls from './components/DesktopPetControls.vue'
+import DesktopPetControlsSimplified from './components/DesktopPetControlsSimplified.vue'
 import IconShowcase from './components/IconShowcase.vue'
 import { initDesktopPetSimulator, shouldUseSimulator } from './utils/desktopPetSimulator.js'
 
@@ -649,6 +649,11 @@ async function startSpeaking() {
     // 立即设置为说话状态，更新UI显示
     isSpeaking.value = true
 
+    // 通知主进程口型同步状态变化
+    if (window.desktopPet) {
+      window.desktopPet.notifySpeakingStateChanged(true)
+    }
+
     // === 第三步：音频上下文管理 ===
 
     // 创建新的音频上下文（如果不存在或已关闭）
@@ -752,6 +757,11 @@ function stopSpeaking() {
     // - "停止说话"按钮变为禁用
     // - 状态显示变为"待机中"
     isSpeaking.value = false
+
+    // 通知主进程口型同步状态变化
+    if (window.desktopPet) {
+      window.desktopPet.notifySpeakingStateChanged(false)
+    }
 
     console.log('口型同步已完全停止')
 
@@ -883,7 +893,7 @@ onMounted(async () => {
     // === 检测运行环境 ===
     // 检查是否应该使用模拟器
     if (shouldUseSimulator()) {
-      console.log('🎭 启动桌面宠物模拟器模式')
+      console.log('🎭 启动桌面模型模拟器模式')
       initDesktopPetSimulator()
       isSimulatorMode.value = true
       isDesktopPetMode.value = true
@@ -900,9 +910,9 @@ onMounted(async () => {
       userAgent: navigator.userAgent
     })
 
-    // === 桌面宠物模式初始化 ===
+    // === 桌面模型模式初始化 ===
     if (isDesktopPetMode.value) {
-      // 设置透明背景和桌面宠物模式类
+      // 设置透明背景和桌面模型模式类
       document.body.classList.add('desktop-pet-mode')
       document.body.style.background = 'transparent'
       document.body.style.margin = '0'
@@ -911,7 +921,7 @@ onMounted(async () => {
       // 启用窗口拖拽
       if (window.desktopPet) {
         window.desktopPet.enableWindowDrag()
-        console.log('桌面宠物模式已启用')
+        console.log('桌面模型模式已启用')
       }
     }
 
@@ -984,12 +994,106 @@ onMounted(async () => {
 
     // 加载默认模型
     await loadModel(currentModelName.value)
+
+    // 设置主进程命令监听器
+    setupMainProcessListeners()
   } catch (error) {
     console.error('应用初始化失败:', error)
   }
 })
 
-// ==================== 桌面宠物模式处理方法 ====================
+// ==================== 主进程通信处理 ====================
+
+/**
+ * 设置主进程命令监听器
+ * 监听来自主进程（托盘菜单）的各种命令
+ */
+function setupMainProcessListeners() {
+  if (!window.desktopPet) {
+    console.log('非 Electron 环境，跳过主进程监听器设置')
+    return
+  }
+
+  console.log('设置主进程命令监听器...')
+
+  // 监听模型切换命令
+  window.desktopPet.onChangeModel((modelName) => {
+    console.log(`收到模型切换命令: ${modelName}`)
+    changeModel(modelName)
+  })
+
+  // 监听表情播放命令
+  window.desktopPet.onPlayExpression((expressionFile) => {
+    console.log(`收到表情播放命令: ${expressionFile}`)
+    selectedExpression.value = expressionFile
+    playExpression()
+  })
+
+  // 监听动作播放命令
+  window.desktopPet.onPlayMotion((motionFile) => {
+    console.log(`收到动作播放命令: ${motionFile}`)
+    selectedMotion.value = motionFile
+    playMotion()
+  })
+
+  // 监听开始说话命令
+  window.desktopPet.onStartSpeaking(() => {
+    console.log('收到开始说话命令')
+    startSpeaking()
+  })
+
+  // 监听停止说话命令
+  window.desktopPet.onStopSpeaking(() => {
+    console.log('收到停止说话命令')
+    stopSpeaking()
+  })
+
+  // 监听口型同步敏感度设置命令
+  window.desktopPet.onSetLipSyncSensitivity((sensitivity) => {
+    console.log(`收到敏感度设置命令: ${sensitivity}`)
+    lipSyncSensitivity.value = sensitivity
+  })
+
+  // 监听模型缩放设置命令
+  window.desktopPet.onSetModelScale((scale) => {
+    console.log(`收到模型缩放命令: ${scale}`)
+    handleScaleChange(scale)
+  })
+
+  // 监听透明度设置命令
+  window.desktopPet.onSetOpacity((opacity) => {
+    console.log(`收到透明度设置命令: ${opacity}`)
+    handleOpacityChange(opacity)
+  })
+
+  // 监听重新调整模型大小命令
+  window.desktopPet.onRefitModel(() => {
+    console.log('收到重新调整模型大小命令')
+    refitModel()
+  })
+
+  console.log('主进程命令监听器设置完成')
+}
+
+/**
+ * 向主进程同步状态变化
+ * 确保主进程的菜单状态与渲染进程保持一致
+ */
+function syncStateToMainProcess() {
+  if (!window.desktopPet) return
+
+  // 同步模型加载状态
+  if (isModelLoaded.value) {
+    window.desktopPet.notifyModelLoaded(currentModelName.value)
+  }
+
+  // 同步口型同步状态
+  window.desktopPet.notifySpeakingStateChanged(isSpeaking.value)
+
+  // 同步其他状态...
+}
+
+// ==================== 桌面模型模式处理方法 ====================
 
 /**
  * 处理模型缩放变化
@@ -999,6 +1103,11 @@ function handleScaleChange(scale) {
   if (model) {
     model.scale.set(scale)
     console.log(`模型缩放已调整为: ${scale}`)
+
+    // 通知主进程缩放变化
+    if (window.desktopPet) {
+      window.desktopPet.notifyModelScaleChanged(scale)
+    }
   }
 }
 
@@ -1010,6 +1119,11 @@ function handleOpacityChange(opacity) {
   if (model) {
     model.alpha = opacity
     console.log(`模型透明度已调整为: ${opacity}`)
+
+    // 通知主进程透明度变化
+    if (window.desktopPet) {
+      window.desktopPet.notifyOpacityChanged(opacity)
+    }
   }
 }
 
@@ -1027,6 +1141,11 @@ function handlePositionLockChange(isLocked) {
   } else {
     console.log('位置已解锁，可以拖拽移动')
   }
+
+  // 通知主进程位置锁定状态变化
+  if (window.desktopPet) {
+    window.desktopPet.notifyPositionLockChanged(isLocked)
+  }
 }
 
 /**
@@ -1039,7 +1158,7 @@ function handleAlwaysOnTopChange(isOnTop) {
   // 可以在这里添加UI反馈
   if (window.desktopPet) {
     window.desktopPet.showNotification(
-      '桌面宠物',
+      '桌面模型',
       `始终置顶已${isOnTop ? '启用' : '禁用'}`
     )
   }
@@ -1366,6 +1485,11 @@ async function loadModel(modelName) {
 
     isModelLoaded.value = true
     console.log(`=== 模型 ${config.name} 加载完成 ===`)
+
+    // 通知主进程模型加载完成
+    if (window.desktopPet) {
+      window.desktopPet.notifyModelLoaded(modelName)
+    }
 
     // 强制渲染多次确保显示
     for (let i = 0; i < 3; i++) {
@@ -2083,7 +2207,7 @@ function formatTime(seconds) {
 </script>
 
 <template>
-  <!-- 桌面宠物模式 -->
+  <!-- 桌面模型模式 -->
   <div v-if="isDesktopPetMode" class="desktop-pet-container">
     <!-- Live2D 模型显示区域 -->
     <div class="model-display">
@@ -2102,307 +2226,12 @@ function formatTime(seconds) {
       </div>
     </div>
 
-    <!-- 桌面宠物控制组件 -->
-    <DesktopPetControls
-      :selected-model="currentModelName"
+    <!-- 简化的桌面模型控制组件 -->
+    <DesktopPetControlsSimplified
+      :current-model-name="currentModelName"
       :is-model-loaded="isModelLoaded"
-      @model-change="changeModel"
-      @scale-change="handleScaleChange"
-      @opacity-change="handleOpacityChange"
-      @position-lock-change="handlePositionLockChange"
-      @always-on-top-change="handleAlwaysOnTopChange"
-      @refit-model="refitModel"
-    >
-      <!-- 表情控制内容 -->
-      <template #expressions-content>
-        <div class="expressions-controls">
-          <!-- 表情选择 -->
-          <div class="control-group">
-            <label>选择表情:</label>
-            <select v-model="selectedExpression" :disabled="!isModelLoaded">
-              <option value="">-- 请选择表情 --</option>
-              <option
-                v-for="expression in currentConfig.expressions"
-                :key="expression.file"
-                :value="expression.file"
-              >
-                {{ expression.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- 表情控制按钮 -->
-          <div class="control-group">
-            <div class="button-row">
-              <button
-                @click="playExpression"
-                :disabled="!isModelLoaded || !selectedExpression"
-                class="control-btn primary"
-              >
-                播放表情
-              </button>
-              <button
-                @click="playRandomExpression"
-                :disabled="!isModelLoaded"
-                class="control-btn secondary"
-              >
-                随机表情
-              </button>
-              <button
-                @click="resetExpression"
-                :disabled="!isModelLoaded"
-                class="control-btn tertiary"
-              >
-                重置表情
-              </button>
-            </div>
-          </div>
-
-          <!-- 表情网格（快速选择） -->
-          <div class="expressions-grid">
-            <button
-              v-for="expression in currentModelConfig.expressions"
-              :key="expression.index"
-              @click="setExpression(expression.index)"
-              class="expression-btn"
-              :disabled="!isModelLoaded"
-            >
-              {{ expression.name }}
-            </button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 动作控制内容 -->
-      <template #motions-content>
-        <div class="motions-controls">
-          <!-- 动作选择 -->
-          <div class="control-group">
-            <label>选择动作:</label>
-            <select v-model="selectedMotion" :disabled="!isModelLoaded">
-              <option value="">-- 请选择动作 --</option>
-              <option
-                v-for="motion in currentConfig.motions"
-                :key="motion.file"
-                :value="motion.file"
-              >
-                {{ motion.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- 动作控制按钮 -->
-          <div class="control-group">
-            <div class="button-row">
-              <button
-                @click="playMotion"
-                :disabled="!isModelLoaded || !selectedMotion"
-                class="control-btn primary"
-              >
-                播放动作
-              </button>
-              <button
-                @click="playRandomMotion"
-                :disabled="!isModelLoaded"
-                class="control-btn secondary"
-              >
-                随机动作
-              </button>
-            </div>
-          </div>
-
-          <!-- 动作网格（快速选择） -->
-          <div class="motions-grid">
-            <button
-              v-for="motion in currentModelConfig.motions"
-              :key="motion.file"
-              @click="playMotionFile(motion.file)"
-              class="motion-btn"
-              :disabled="!isModelLoaded"
-            >
-              {{ motion.name }}
-            </button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 音频控制内容 -->
-      <template #audio-content>
-        <div class="audio-controls">
-          <!-- 音频选择 -->
-          <div class="control-group" v-if="hasAudioSupport">
-            <label>选择音频:</label>
-            <select v-model="selectedSound" :disabled="!isModelLoaded">
-              <option value="">-- 请选择音频 --</option>
-              <option
-                v-for="sound in currentConfig.sounds"
-                :key="sound.file"
-                :value="sound.file"
-              >
-                {{ sound.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- 播放控制按钮 -->
-          <div class="control-group" v-if="hasAudioSupport">
-            <div class="button-row">
-              <button
-                @click="playSelectedAudio"
-                :disabled="!isModelLoaded || !selectedSound"
-                class="control-btn primary"
-              >
-                ▶️ 播放
-              </button>
-              <button
-                @click="isPaused ? resumeAudio() : pauseAudio()"
-                :disabled="!isModelLoaded || !currentAudio"
-                class="control-btn secondary"
-              >
-                {{ isPaused ? '▶️ 继续' : '⏸️ 暂停' }}
-              </button>
-              <button
-                @click="stopAudio"
-                :disabled="!isModelLoaded || !currentAudio"
-                class="control-btn danger"
-              >
-                ⏹️ 停止
-              </button>
-            </div>
-          </div>
-
-          <!-- 音量控制 -->
-          <div class="control-group">
-            <label>音量: {{ Math.round(audioVolume * 100) }}%</label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              v-model="audioVolume"
-              @input="updateGlobalVolume"
-            >
-          </div>
-
-          <!-- 播放进度 -->
-          <div class="control-group" v-if="currentAudio">
-            <label>进度: {{ formatTime(audioCurrentTime) }} / {{ formatTime(audioDuration) }}</label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              v-model="audioProgress"
-              @input="seekAudio(audioProgress)"
-            >
-          </div>
-
-          <!-- 播放状态 -->
-          <div class="control-group status-display">
-            <span v-if="isPlaying" class="status playing">🎵 正在播放</span>
-            <span v-else-if="isPaused" class="status paused">⏸️ 已暂停</span>
-            <span v-else class="status stopped">⏹️ 已停止</span>
-          </div>
-
-          <!-- 无音频支持提示 -->
-          <div v-if="!hasAudioSupport" class="control-group">
-            <p class="no-audio-message">当前模型不支持音频功能</p>
-          </div>
-        </div>
-      </template>
-
-      <!-- 状态信息内容 -->
-      <template #status-content>
-        <div class="status-info">
-          <div class="status-item">
-            <span class="label">当前模型:</span>
-            <span class="value">{{ currentConfig.name }}</span>
-          </div>
-          <div class="status-item">
-            <span class="label">模型状态:</span>
-            <span class="value" :class="{ 'loaded': isModelLoaded, 'loading': !isModelLoaded }">
-              {{ isModelLoaded ? '✅ 已加载' : '⏳ 加载中' }}
-            </span>
-          </div>
-          <div class="status-item">
-            <span class="label">动作数量:</span>
-            <span class="value">{{ currentConfig.motions.length }}</span>
-          </div>
-          <div class="status-item">
-            <span class="label">表情数量:</span>
-            <span class="value">{{ currentConfig.expressions.length }}</span>
-          </div>
-          <div class="status-item">
-            <span class="label">音频数量:</span>
-            <span class="value">{{ currentConfig.sounds.length }}</span>
-          </div>
-          <div class="status-item">
-            <span class="label">音频支持:</span>
-            <span class="value">{{ hasAudioSupport ? '✅ 是' : '❌ 否' }}</span>
-          </div>
-          <div class="status-item" v-if="model">
-            <span class="label">模型缩放:</span>
-            <span class="value">{{ model.scale.x.toFixed(2) }}</span>
-          </div>
-          <div class="status-item" v-if="model">
-            <span class="label">模型位置:</span>
-            <span class="value">({{ model.position.x.toFixed(0) }}, {{ model.position.y.toFixed(0) }})</span>
-          </div>
-        </div>
-      </template>
-
-      <!-- 口型同步内容 -->
-      <template #lipsync-content>
-        <div class="lipsync-controls">
-          <!-- 音频文件信息 -->
-          <div class="control-group">
-            <label>测试音频:</label>
-            <span class="audio-info">{{ audioFile ? 'test.wav (内置测试音频)' : '未加载音频文件' }}</span>
-          </div>
-
-          <!-- 口型同步控制按钮 -->
-          <div class="control-group">
-            <div class="button-row">
-              <button
-                @click="startSpeaking"
-                :disabled="!model || !isModelLoaded || isSpeaking || !audioFile"
-                class="lipsync-btn primary"
-              >
-                {{ isSpeaking ? '正在说话...' : '🎤 开始说话' }}
-              </button>
-              <button
-                @click="stopSpeaking"
-                :disabled="!isSpeaking"
-                class="lipsync-btn secondary"
-              >
-                🛑 停止说话
-              </button>
-            </div>
-          </div>
-
-          <!-- 敏感度调节 -->
-          <div class="control-group">
-            <label>口型敏感度: {{ lipSyncSensitivity }}</label>
-            <input
-              type="range"
-              min="10"
-              max="100"
-              step="5"
-              v-model="lipSyncSensitivity"
-            >
-            <div class="sensitivity-labels">
-              <span>低敏感度</span>
-              <span>高敏感度</span>
-            </div>
-          </div>
-
-          <!-- 状态指示器 -->
-          <div class="control-group status-display">
-            <span v-if="isSpeaking" class="status speaking">🎙️ 正在分析音频并同步口型</span>
-            <span v-else class="status idle">💤 口型同步待机中</span>
-          </div>
-        </div>
-      </template>
-    </DesktopPetControls>
+      :is-speaking="isSpeaking"
+    />
   </div>
 
   <!-- 传统 Web 模式 -->
@@ -2863,7 +2692,7 @@ select:focus {
   }
 }
 
-/* ==================== 桌面宠物模式样式 ==================== */
+/* ==================== 桌面模型模式样式 ==================== */
 
 .desktop-pet-container {
   position: relative;
@@ -2907,7 +2736,7 @@ select:focus {
   pointer-events: none;
 }
 
-/* 桌面宠物控制面板样式 */
+/* 桌面模型控制面板样式 */
 .control-group {
   margin-bottom: 12px;
 }
@@ -3082,7 +2911,7 @@ select:focus {
   100% { transform: rotate(360deg); }
 }
 
-/* === 桌面宠物控制面板内容样式 === */
+/* === 桌面模型控制面板内容样式 === */
 
 .expressions-grid,
 .motions-grid {
@@ -3184,7 +3013,7 @@ select:focus {
   cursor: not-allowed;
 }
 
-/* === 桌面宠物模式下的全局样式调整 === */
+/* === 桌面模型模式下的全局样式调整 === */
 
 body.desktop-pet-mode {
   margin: 0;

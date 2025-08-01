@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=300, height=400, user-scalable=no">
-  <title>Live2D 桌面宠物测试</title>
+  <title>Live2D 桌面模型测试</title>
   <style>
     * {
       margin: 0;
@@ -157,7 +157,7 @@
   <div class="pet-container drag">
     <!-- 状态栏 -->
     <div class="status-bar">
-      🐾 Live2D 桌面宠物测试模式
+      🐾 Live2D 桌面模型测试模式
     </div>
     
     <!-- 模型显示区域 -->
@@ -179,7 +179,7 @@
     
     <!-- 调试信息 -->
     <div class="debug-info" id="debugInfo">
-      <div>模式: 桌面宠物测试</div>
+      <div>模式: 桌面模型测试</div>
       <div>拖拽: 启用</div>
       <div>位置: <span id="position">0, 0</span></div>
       <div>状态: <span id="status">就绪</span></div>
@@ -190,15 +190,15 @@
   </div>
 
   <script>
-    // 桌面宠物测试脚本
+    // 桌面模型测试脚本
     let isDragging = false;
     let dragOffset = { x: 0, y: 0 };
     let debugMode = false;
     
     // 初始化
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('🎭 桌面宠物测试页面已加载');
-      showNotification('桌面宠物测试模式已启动');
+      console.log('🎭 桌面模型测试页面已加载');
+      showNotification('桌面模型测试模式已启动');
       
       // 设置拖拽功能
       setupDragFunctionality();

@@ -1,7 +1,7 @@
 /**
- * 桌面宠物模拟器
- * 在浏览器环境中模拟 Electron 桌面宠物的功能
- * 用于开发和测试桌面宠物界面和交互
+ * 桌面模型模拟器
+ * 在浏览器环境中模拟 Electron 桌面模型的功能
+ * 用于开发和测试桌面模型界面和交互
  */
 
 class DesktopPetSimulator {
@@ -15,12 +15,12 @@ class DesktopPetSimulator {
       alwaysOnTop: true,
       isLocked: false
     }
-    
+
     this.callbacks = {
       positionLock: new Set(),
       alwaysOnTop: new Set()
     }
-    
+
     this.init()
   }
 
@@ -28,37 +28,37 @@ class DesktopPetSimulator {
    * 初始化模拟器
    */
   init() {
-    console.log('🎭 桌面宠物模拟器已启动')
-    
-    // 设置页面样式模拟桌面宠物
+    console.log('🎭 桌面模型模拟器已启动')
+
+    // 设置页面样式模拟桌面模型
     this.setupPetMode()
-    
+
     // 添加拖拽功能
     this.setupDragFunctionality()
-    
+
     // 添加键盘快捷键
     this.setupKeyboardShortcuts()
-    
+
     // 模拟窗口控制
     this.setupWindowControls()
   }
 
   /**
-   * 设置桌面宠物模式样式
+   * 设置桌面模型模式样式
    */
   setupPetMode() {
-    // 设置页面为桌面宠物模式
+    // 设置页面为桌面模型模式
     document.body.style.margin = '0'
     document.body.style.padding = '0'
     document.body.style.overflow = 'hidden'
     document.body.style.background = 'transparent'
     document.body.classList.add('desktop-pet-mode')
-    
+
     // 创建模拟窗口边框（可选，用于调试）
     if (this.shouldShowDebugBorder()) {
       this.createDebugBorder()
     }
-    
+
     // 设置窗口大小
     this.resizeWindow()
   }
@@ -87,9 +87,9 @@ class DesktopPetSimulator {
       z-index: 10000;
       background: rgba(255, 107, 107, 0.1);
     `
-    
+
     const label = document.createElement('div')
-    label.textContent = '桌面宠物模拟模式'
+    label.textContent = '桌面模型模拟模式'
     label.style.cssText = `
       position: absolute;
       top: 5px;
@@ -100,7 +100,7 @@ class DesktopPetSimulator {
       font-size: 12px;
       border-radius: 3px;
     `
-    
+
     border.appendChild(label)
     document.body.appendChild(border)
   }
@@ -122,11 +122,11 @@ class DesktopPetSimulator {
   setupDragFunctionality() {
     let isDragging = false
     let dragOffset = { x: 0, y: 0 }
-    
+
     // 监听鼠标事件实现拖拽
     document.addEventListener('mousedown', (e) => {
       if (this.windowConfig.isLocked) return
-      
+
       // 检查是否点击在可拖拽区域
       if (this.isDraggableArea(e.target)) {
         isDragging = true
@@ -136,21 +136,21 @@ class DesktopPetSimulator {
         e.preventDefault()
       }
     })
-    
+
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return
-      
+
       const deltaX = e.clientX - dragOffset.x
       const deltaY = e.clientY - dragOffset.y
-      
+
       // 模拟窗口移动（在实际应用中这会移动整个窗口）
       console.log(`模拟窗口移动: (${deltaX}, ${deltaY})`)
-      
+
       // 更新拖拽起始点
       dragOffset.x = e.clientX
       dragOffset.y = e.clientY
     })
-    
+
     document.addEventListener('mouseup', () => {
       if (isDragging) {
         isDragging = false
@@ -172,9 +172,9 @@ class DesktopPetSimulator {
       if (appRegion === 'drag') return true
       current = current.parentElement
     }
-    
+
     // 默认情况下，canvas 和空白区域可拖拽
-    return element.tagName === 'CANVAS' || 
+    return element.tagName === 'CANVAS' ||
            element === document.body ||
            element.classList.contains('model-display')
   }
@@ -189,19 +189,19 @@ class DesktopPetSimulator {
         e.preventDefault()
         this.toggleAlwaysOnTop()
       }
-      
+
       // Ctrl/Cmd + L: 切换位置锁定
       if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
         e.preventDefault()
         this.togglePositionLock()
       }
-      
+
       // Ctrl/Cmd + D: 切换调试模式
       if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
         e.preventDefault()
         this.toggleDebugMode()
       }
-      
+
       // ESC: 隐藏所有面板
       if (e.key === 'Escape') {
         this.hideAllPanels()
@@ -217,7 +217,7 @@ class DesktopPetSimulator {
     window.addEventListener('resize', () => {
       console.log('窗口大小变化:', window.innerWidth, window.innerHeight)
     })
-    
+
     // 监听页面可见性变化
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
@@ -244,31 +244,31 @@ class DesktopPetSimulator {
   toggleAlwaysOnTop() {
     this.windowConfig.alwaysOnTop = !this.windowConfig.alwaysOnTop
     console.log('始终置顶状态:', this.windowConfig.alwaysOnTop)
-    
+
     // 触发回调
     this.callbacks.alwaysOnTop.forEach(callback => {
       callback(this.windowConfig.alwaysOnTop)
     })
-    
+
     return Promise.resolve(this.windowConfig.alwaysOnTop)
   }
 
   togglePositionLock() {
     this.windowConfig.isLocked = !this.windowConfig.isLocked
     console.log('位置锁定状态:', this.windowConfig.isLocked)
-    
+
     // 触发回调
     this.callbacks.positionLock.forEach(callback => {
       callback(this.windowConfig.isLocked)
     })
-    
+
     return this.windowConfig.isLocked
   }
 
   enableWindowDrag() {
     console.log('启用窗口拖拽')
     document.body.style.webkitAppRegion = 'drag'
-    
+
     // 为交互元素设置 no-drag
     const interactiveElements = document.querySelectorAll('button, input, select, textarea, .interactive')
     interactiveElements.forEach(element => {
@@ -291,7 +291,7 @@ class DesktopPetSimulator {
 
   showNotification(title, body, icon = null) {
     console.log(`通知: ${title} - ${body}`)
-    
+
     // 使用浏览器通知 API
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, { body, icon })
@@ -331,22 +331,22 @@ class DesktopPetSimulator {
 let simulator = null
 
 /**
- * 初始化桌面宠物模拟器
+ * 初始化桌面模型模拟器
  */
 export function initDesktopPetSimulator() {
   if (!simulator) {
     simulator = new DesktopPetSimulator()
-    
+
     // 暴露到全局对象，模拟 Electron preload 脚本
     window.desktopPet = simulator
     window.electronAPI = {
       platform: simulator.getPlatform(),
       isDev: simulator.isDevelopment()
     }
-    
-    console.log('🎭 桌面宠物模拟器已初始化')
+
+    console.log('🎭 桌面模型模拟器已初始化')
   }
-  
+
   return simulator
 }
 
