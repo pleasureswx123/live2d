@@ -1,5 +1,5 @@
 /**
- * Live2D 桌面宠物 - Electron 主进程
+ * Live2D 桌面模型 - Electron 主进程
  *
  * 功能特性:
  * - 透明无边框窗口
@@ -107,7 +107,7 @@ function calculateDefaultPosition() {
 
 /**
  * 创建主窗口
- * 配置透明、无边框、置顶的桌面宠物窗口
+ * 配置透明、无边框、置顶的桌面模型窗口
  */
 function createMainWindow() {
   // 计算窗口位置
@@ -126,7 +126,7 @@ function createMainWindow() {
     x: windowPosition.x,
     y: windowPosition.y,
 
-    // === 桌面宠物特性配置 ===
+    // === 桌面模型特性配置 ===
     transparent: true,           // 透明背景
     frame: false,               // 无边框
     alwaysOnTop: windowConfig.alwaysOnTop !== false, // 始终置顶
@@ -201,7 +201,7 @@ function createMainWindow() {
       if (tray) {
         tray.displayBalloon({
           iconType: 'info',
-          title: 'Live2D 桌面宠物',
+          title: 'Live2D 桌面模型',
           content: '应用已最小化到系统托盘'
         })
       }
@@ -222,12 +222,12 @@ function createTray() {
     tray = new Tray(trayIconPath)
 
     // 设置托盘提示
-    tray.setToolTip('Live2D 桌面宠物')
+    tray.setToolTip('Live2D 桌面模型')
 
     // 创建右键菜单
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: '显示宠物',
+        label: '显示模型',
         click: () => {
           if (mainWindow) {
             mainWindow.show()
@@ -236,7 +236,7 @@ function createTray() {
         }
       },
       {
-        label: '隐藏宠物',
+        label: '隐藏模型',
         click: () => {
           if (mainWindow) {
             mainWindow.hide()
@@ -286,8 +286,8 @@ function createTray() {
         click: () => {
           dialog.showMessageBox(mainWindow, {
             type: 'info',
-            title: '关于 Live2D 桌面宠物',
-            message: 'Live2D 桌面宠物 v1.0.0',
+            title: '关于 Live2D 桌面模型',
+            message: 'Live2D 桌面模型 v1.0.0',
             detail: '基于 Electron + Vue + PIXI.js 开发\n支持动作、表情、音频播放和口型同步',
             buttons: ['确定']
           })
@@ -383,7 +383,7 @@ function setupAutoUpdater() {
 
     // 更新托盘提示
     if (tray) {
-      tray.setToolTip(`Live2D 桌面宠物 - 下载更新中 ${percent}%`)
+      tray.setToolTip(`Live2D 桌面模型 - 下载更新中 ${percent}%`)
     }
   })
 
@@ -392,7 +392,7 @@ function setupAutoUpdater() {
 
     // 重置托盘提示
     if (tray) {
-      tray.setToolTip('Live2D 桌面宠物')
+      tray.setToolTip('Live2D 桌面模型')
     }
 
     // 提示重启安装
