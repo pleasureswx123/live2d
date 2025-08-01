@@ -8,9 +8,10 @@
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-    <script src="/library/live2d.min.js"></script>
+    <!-- Live2D 核心库必须在其他库之前加载 -->
     <script src="/library/live2dcubismcore.min.js"></script>
+    <script src="/library/live2d.min.js"></script>
+    <script type="module" src="/src/main.js"></script>
     
   </body>
 </html>

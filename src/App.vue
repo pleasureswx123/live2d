@@ -1,9 +1,20 @@
 <script setup>
 import * as PIXI from 'pixi.js'
 import { Live2DModel, SoundManager, MotionPriority } from 'pixi-live2d-display'
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import DesktopPetControls from './components/DesktopPetControls.vue'
+import IconShowcase from './components/IconShowcase.vue'
+import { initDesktopPetSimulator, shouldUseSimulator } from './utils/desktopPetSimulator.js'
 
 window.PIXI = PIXI
+
+// 检测是否在 Electron 环境中运行
+const isElectron = ref(false)
+const isDesktopPetMode = ref(false)
+const isSimulatorMode = ref(false)
+
+// 开发模式检测
+const isDevelopmentMode = ref(import.meta.env.DEV)
 
 import testAudioUrl from '@/assets/test.wav'
 const audioFile = ref(testAudioUrl);
@@ -179,6 +190,7 @@ const modelConfigs = {
 
 // 当前模型配置
 const currentConfig = computed(() => modelConfigs[currentModelName.value])
+const currentModelConfig = computed(() => modelConfigs[currentModelName.value])
 
 // 选中的动作和表情
 const selectedMotion = ref('')
@@ -720,19 +732,201 @@ function stopSpeaking() {
   }
 }
 
+// ==================== 性能监控相关 ====================
+
+/**
+ * 性能监控数据
+ */
+const performanceStats = ref({
+  fps: 0,
+  memoryUsage: 0,
+  renderTime: 0,
+  lastUpdate: Date.now()
+})
+
+/**
+ * 启动性能监控
+ */
+function startPerformanceMonitoring() {
+  if (!app) return
+
+  let frameCount = 0
+  let lastTime = performance.now()
+
+  const updateStats = () => {
+    const currentTime = performance.now()
+    frameCount++
+
+    // 每秒更新一次统计
+    if (currentTime - lastTime >= 1000) {
+      performanceStats.value.fps = Math.round(frameCount * 1000 / (currentTime - lastTime))
+
+      // 获取内存使用情况（如果可用）
+      if (performance.memory) {
+        performanceStats.value.memoryUsage = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)
+      }
+
+      performanceStats.value.renderTime = app.ticker.deltaMS
+      performanceStats.value.lastUpdate = Date.now()
+
+      frameCount = 0
+      lastTime = currentTime
+    }
+
+    requestAnimationFrame(updateStats)
+  }
+
+  updateStats()
+  console.log('性能监控已启动')
+}
+
+// 等待Canvas元素准备就绪
+async function waitForCanvasReady() {
+  console.log('等待Canvas元素准备就绪...')
+
+  const maxAttempts = 50 // 最多等待5秒
+  let attempts = 0
+
+  while (attempts < maxAttempts) {
+    if (canvas.value) {
+      const rect = canvas.value.getBoundingClientRect()
+      console.log(`Canvas检查 ${attempts + 1}: 元素存在=${!!canvas.value}, 尺寸=${rect.width}x${rect.height}`)
+
+      if (rect.width > 0 && rect.height > 0) {
+        console.log('✅ Canvas元素准备就绪')
+        return true
+      }
+    }
+
+    attempts++
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+
+  console.warn('⚠️ Canvas元素准备超时，继续使用默认配置')
+  return false
+}
+
+// 检查Live2D核心库是否正确加载
+function checkLive2DLibraries() {
+  console.log('=== 检查Live2D库 ===')
+
+  // 检查Live2D核心库
+  if (typeof window.Live2DCubismCore === 'undefined') {
+    console.error('❌ Live2DCubismCore未加载！请检查live2dcubismcore.min.js是否正确加载')
+    return false
+  }
+  console.log('✅ Live2DCubismCore已加载')
+
+  // 检查PIXI Live2D插件
+  if (typeof Live2DModel === 'undefined') {
+    console.error('❌ Live2DModel未定义！请检查pixi-live2d-display库是否正确加载')
+    return false
+  }
+  console.log('✅ Live2DModel已加载')
+
+  // 检查PIXI
+  if (typeof PIXI === 'undefined') {
+    console.error('❌ PIXI未定义！请检查pixi.js库是否正确加载')
+    return false
+  }
+  console.log('✅ PIXI已加载，版本:', PIXI.VERSION)
+
+  console.log('=== Live2D库检查完成 ===')
+  return true
+}
+
 onMounted(async () => {
   try {
+    console.log('=== 应用开始初始化 ===')
+
+    // === 检查依赖库 ===
+    if (!checkLive2DLibraries()) {
+      throw new Error('Live2D依赖库检查失败，请刷新页面重试')
+    }
+
+    // === 检测运行环境 ===
+    // 检查是否应该使用模拟器
+    if (shouldUseSimulator()) {
+      console.log('🎭 启动桌面宠物模拟器模式')
+      initDesktopPetSimulator()
+      isSimulatorMode.value = true
+      isDesktopPetMode.value = true
+    } else {
+      // 检查是否在真实的 Electron 环境中运行
+      isElectron.value = !!(window.desktopPet || window.electronAPI)
+      isDesktopPetMode.value = isElectron.value
+    }
+
+    console.log('运行环境检测:', {
+      isElectron: isElectron.value,
+      isDesktopPetMode: isDesktopPetMode.value,
+      isSimulatorMode: isSimulatorMode.value,
+      userAgent: navigator.userAgent
+    })
+
+    // === 桌面宠物模式初始化 ===
+    if (isDesktopPetMode.value) {
+      // 设置透明背景和桌面宠物模式类
+      document.body.classList.add('desktop-pet-mode')
+      document.body.style.background = 'transparent'
+      document.body.style.margin = '0'
+      document.body.style.padding = '0'
+
+      // 启用窗口拖拽
+      if (window.desktopPet) {
+        window.desktopPet.enableWindowDrag()
+        console.log('桌面宠物模式已启用')
+      }
+    }
+
     audioContext = new AudioContext();
-    
-    app = new PIXI.Application({
+
+    // === 等待DOM完全渲染 ===
+    await nextTick()
+
+    // === 等待Canvas元素准备就绪 ===
+    await waitForCanvasReady()
+
+    // === 检查必要的依赖 ===
+    console.log('检查依赖库...')
+    console.log('PIXI版本:', PIXI.VERSION)
+    console.log('Live2DModel可用:', typeof Live2DModel !== 'undefined')
+    console.log('Canvas元素:', canvas.value)
+
+    if (!canvas.value) {
+      throw new Error('Canvas元素未找到')
+    }
+
+    // === PIXI 应用配置 ===
+    const pixiConfig = {
       view: canvas.value,
-      width: 600,
-      height: 600,
-      backgroundColor: 0x000000,
+      width: isDesktopPetMode.value ? 300 : 600,
+      height: isDesktopPetMode.value ? 400 : 600,
+      backgroundColor: isDesktopPetMode.value ? 0x000000 : 0x000000,
+      backgroundAlpha: isDesktopPetMode.value ? 0 : 1,
       autoDensity: true,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
-    })
+      // === 性能优化配置 ===
+      powerPreference: 'high-performance', // 使用高性能GPU
+      preserveDrawingBuffer: false, // 减少内存占用
+      clearBeforeRender: true, // 确保每帧清理
+      forceCanvas: false, // 优先使用WebGL
+    }
+
+    console.log('PIXI 应用配置:', pixiConfig)
+
+    // 创建PIXI应用
+    app = new PIXI.Application(pixiConfig)
+
+    if (!app) {
+      throw new Error('PIXI应用创建失败')
+    }
+
+    console.log('PIXI应用创建成功')
+    console.log('PIXI渲染器:', app.renderer.type === PIXI.RENDERER_TYPE.WEBGL ? 'WebGL' : 'Canvas')
+    console.log('Canvas实际尺寸:', app.view.width, 'x', app.view.height)
+    console.log('Canvas CSS尺寸:', app.view.style.width, 'x', app.view.style.height)
 
     // 配置 SoundManager
     SoundManager.volume = audioVolume.value
@@ -747,6 +941,11 @@ onMounted(async () => {
     // 添加窗口大小变化监听器
     window.addEventListener('resize', handleResize)
 
+    // 启动性能监控
+    if (isDevelopmentMode.value) {
+      startPerformanceMonitoring()
+    }
+
     // 加载默认模型
     await loadModel(currentModelName.value)
   } catch (error) {
@@ -754,26 +953,146 @@ onMounted(async () => {
   }
 })
 
+// ==================== 桌面宠物模式处理方法 ====================
+
+/**
+ * 处理模型缩放变化
+ * @param {number} scale - 新的缩放比例 (0.5 - 2.0)
+ */
+function handleScaleChange(scale) {
+  if (model) {
+    model.scale.set(scale)
+    console.log(`模型缩放已调整为: ${scale}`)
+  }
+}
+
+/**
+ * 处理透明度变化
+ * @param {number} opacity - 新的透明度 (0.2 - 1.0)
+ */
+function handleOpacityChange(opacity) {
+  if (model) {
+    model.alpha = opacity
+    console.log(`模型透明度已调整为: ${opacity}`)
+  }
+}
+
+/**
+ * 处理位置锁定状态变化
+ * @param {boolean} isLocked - 是否锁定位置
+ */
+function handlePositionLockChange(isLocked) {
+  console.log(`位置锁定状态: ${isLocked ? '已锁定' : '已解锁'}`)
+
+  // 可以在这里添加额外的位置锁定逻辑
+  if (isLocked) {
+    // 锁定时可以显示一个小图标或提示
+    console.log('位置已锁定，拖拽功能已禁用')
+  } else {
+    console.log('位置已解锁，可以拖拽移动')
+  }
+}
+
+/**
+ * 处理始终置顶状态变化
+ * @param {boolean} isOnTop - 是否始终置顶
+ */
+function handleAlwaysOnTopChange(isOnTop) {
+  console.log(`始终置顶状态: ${isOnTop ? '已启用' : '已禁用'}`)
+
+  // 可以在这里添加UI反馈
+  if (window.desktopPet) {
+    window.desktopPet.showNotification(
+      '桌面宠物',
+      `始终置顶已${isOnTop ? '启用' : '禁用'}`
+    )
+  }
+}
+
 onUnmounted(() => {
+  console.log('=== 开始清理应用资源 ===')
+
+  // 停止口型同步
+  stopSpeaking()
+
+  // 停止音频播放
+  stopAudio()
+
+  // 清理音频上下文
+  if (currentAudioContext && currentAudioContext.state !== 'closed') {
+    currentAudioContext.close()
+    currentAudioContext = null
+  }
+
   // 清理事件监听器
   window.removeEventListener('resize', handleResize)
 
   // 清理模型和应用
   if (model) {
-    model.destroy()
+    console.log('销毁Live2D模型')
+    model.destroy({ children: true, texture: true, baseTexture: true })
+    model = null
   }
+
   if (app) {
-    app.destroy(true)
+    console.log('销毁PIXI应用')
+    app.destroy(true, { children: true, texture: true, baseTexture: true })
+    app = null
   }
+
+  // 强制垃圾回收（如果可用）
+  if (window.gc) {
+    window.gc()
+  }
+
+  console.log('=== 应用资源清理完成 ===')
 })
 
 // 获取 Canvas 的逻辑尺寸（CSS 尺寸，不受 devicePixelRatio 影响）
 function getCanvasLogicalSize() {
-  const canvas = app.view
-  const rect = canvas.getBoundingClientRect()
-  return {
-    width: rect.width,
-    height: rect.height
+  try {
+    const defaultWidth = isDesktopPetMode.value ? 300 : 600
+    const defaultHeight = isDesktopPetMode.value ? 400 : 600
+
+    // 优先使用原始canvas元素
+    if (canvas.value) {
+      const rect = canvas.value.getBoundingClientRect()
+      console.log('Canvas原始元素尺寸:', rect.width, 'x', rect.height)
+
+      if (rect.width > 0 && rect.height > 0) {
+        return {
+          width: rect.width,
+          height: rect.height
+        }
+      }
+    }
+
+    // 备用方案：使用PIXI应用的view
+    if (app && app.view) {
+      const rect = app.view.getBoundingClientRect()
+      console.log('PIXI view尺寸:', rect.width, 'x', rect.height)
+
+      if (rect.width > 0 && rect.height > 0) {
+        return {
+          width: rect.width,
+          height: rect.height
+        }
+      }
+    }
+
+    console.warn('无法获取有效的Canvas尺寸，使用默认尺寸:', defaultWidth, 'x', defaultHeight)
+    return {
+      width: defaultWidth,
+      height: defaultHeight
+    }
+  } catch (error) {
+    console.error('获取Canvas尺寸失败:', error)
+    const defaultWidth = isDesktopPetMode.value ? 300 : 600
+    const defaultHeight = isDesktopPetMode.value ? 400 : 600
+    return {
+      width: defaultWidth,
+      height: defaultHeight
+    }
   }
 }
 
@@ -897,42 +1216,109 @@ function autoFitModel(model, canvasWidth, canvasHeight) {
 
 async function loadModel(modelName) {
   try {
+    console.log(`=== 开始加载模型: ${modelName} ===`)
     isModelLoaded.value = false
+
+    // 检查必要的依赖
+    if (!app) {
+      throw new Error('PIXI应用未初始化')
+    }
+
+    if (!Live2DModel) {
+      throw new Error('Live2DModel未定义，请检查pixi-live2d-display库是否正确加载')
+    }
 
     // 移除旧模型
     if (model) {
+      console.log('移除旧模型')
       app.stage.removeChild(model)
       model.destroy()
+      model = null
     }
 
-    console.log(`开始加载模型: ${modelName}`)
     const config = modelConfigs[modelName]
-    model = await Live2DModel.from(config.path)
-    console.log('模型加载成功:', model)
+    if (!config) {
+      throw new Error(`未找到模型配置: ${modelName}`)
+    }
 
-    // 添加动作开始事件监听器，用于音频同步
-    model.internalModel.motionManager.on('motionStart', (group, index, audio) => {
-      console.log(`动作开始: 组=${group}, 索引=${index}`)
-      if (audio) {
-        console.log('动作包含音频，已自动播放')
-        // 这里可以添加字幕显示等功能
+    console.log(`模型配置:`, config)
+    console.log(`模型路径: ${config.path}`)
+
+    // 检查模型文件是否存在
+    try {
+      const response = await fetch(config.path)
+      if (!response.ok) {
+        throw new Error(`模型文件不存在或无法访问: ${config.path} (状态码: ${response.status})`)
       }
-    })
+      console.log('模型文件检查通过')
+    } catch (fetchError) {
+      throw new Error(`无法访问模型文件: ${fetchError.message}`)
+    }
 
-    // 添加动作结束事件监听器
-    model.internalModel.motionManager.on('motionFinish', (group, index) => {
-      console.log(`动作结束: 组=${group}, 索引=${index}`)
-    })
+    // 加载模型
+    console.log('开始加载Live2D模型...')
+    model = await Live2DModel.from(config.path)
 
+    if (!model) {
+      throw new Error('模型加载返回null')
+    }
+
+    console.log('模型加载成功:', model)
+    console.log('模型内部结构:', model.internalModel)
+
+    // 添加事件监听器
+    if (model.internalModel && model.internalModel.motionManager) {
+      // 添加动作开始事件监听器
+      model.internalModel.motionManager.on('motionStart', (group, index, audio) => {
+        console.log(`动作开始: 组=${group}, 索引=${index}`)
+        if (audio) {
+          console.log('动作包含音频，已自动播放')
+        }
+      })
+
+      // 添加动作结束事件监听器
+      model.internalModel.motionManager.on('motionFinish', (group, index) => {
+        console.log(`动作结束: 组=${group}, 索引=${index}`)
+      })
+    }
+
+    // 添加到舞台
+    console.log('添加模型到PIXI舞台')
     app.stage.addChild(model)
 
-    // 等待一帧以确保模型完全渲染
-    await new Promise(resolve => requestAnimationFrame(resolve))
+    // 等待多帧以确保模型完全渲染
+    await new Promise(resolve => {
+      let frameCount = 0
+      const waitFrame = () => {
+        frameCount++
+        if (frameCount < 3) {
+          requestAnimationFrame(waitFrame)
+        } else {
+          resolve()
+        }
+      }
+      requestAnimationFrame(waitFrame)
+    })
+
+    // 检查模型是否正确添加到舞台
+    if (!app.stage.children.includes(model)) {
+      throw new Error('模型未能正确添加到PIXI舞台')
+    }
+
+    console.log('模型已添加到舞台，开始调整位置和缩放')
 
     // 自动调整模型缩放和位置
     const { width: canvasWidth, height: canvasHeight } = getCanvasLogicalSize()
-    console.log(`模型加载完成，Canvas 逻辑尺寸: ${canvasWidth} x ${canvasHeight}`)
-    autoFitModel(model, canvasWidth, canvasHeight)
+    console.log(`Canvas 逻辑尺寸: ${canvasWidth} x ${canvasHeight}`)
+
+    if (canvasWidth > 0 && canvasHeight > 0) {
+      autoFitModel(model, canvasWidth, canvasHeight)
+    } else {
+      console.warn('Canvas尺寸无效，使用默认位置和缩放')
+      const defaultScale = getDefaultScale(modelName)
+      model.scale.set(defaultScale)
+      model.position.set(canvasWidth / 2, canvasHeight / 2)
+    }
 
     // 重置选择
     selectedMotion.value = ''
@@ -943,10 +1329,42 @@ async function loadModel(modelName) {
     stopAudio()
 
     isModelLoaded.value = true
-    console.log(`模型 ${config.name} 设置完成`)
+    console.log(`=== 模型 ${config.name} 加载完成 ===`)
+
+    // 强制渲染多次确保显示
+    for (let i = 0; i < 3; i++) {
+      await new Promise(resolve => requestAnimationFrame(resolve))
+      if (app.renderer) {
+        app.renderer.render(app.stage)
+      }
+    }
+
+    // 验证模型是否可见
+    console.log('模型最终状态:')
+    console.log('- 位置:', model.position.x, model.position.y)
+    console.log('- 缩放:', model.scale.x, model.scale.y)
+    console.log('- 可见性:', model.visible)
+    console.log('- 透明度:', model.alpha)
+    console.log('- 舞台子元素数量:', app.stage.children.length)
+
   } catch (error) {
-    console.error('模型加载失败:', error)
+    console.error('=== 模型加载失败 ===')
+    console.error('错误详情:', error)
+    console.error('错误堆栈:', error.stack)
     isModelLoaded.value = false
+
+    // 清理可能的残留状态
+    if (model) {
+      try {
+        if (app && app.stage && app.stage.children.includes(model)) {
+          app.stage.removeChild(model)
+        }
+        model.destroy()
+      } catch (cleanupError) {
+        console.error('清理模型时出错:', cleanupError)
+      }
+      model = null
+    }
   }
 }
 
@@ -955,7 +1373,16 @@ const randomInt = (min, max) => {
 }
 
 // 切换模型
-async function changeModel() {
+async function changeModel(modelName) {
+  console.log('切换模型请求:', modelName)
+
+  // 如果传入了模型名称，更新当前模型名称
+  if (modelName && typeof modelName === 'string') {
+    currentModelName.value = modelName
+    console.log('更新currentModelName为:', modelName)
+  }
+
+  // 加载模型
   await loadModel(currentModelName.value)
 }
 
@@ -1037,6 +1464,26 @@ async function playMotion() {
     console.log('动作播放成功')
   } catch (error) {
     console.error('播放动作失败:', error)
+  }
+}
+
+// 直接播放指定动作文件
+async function playMotionFile(motionFile) {
+  if (!model || !isModelLoaded.value) {
+    console.warn('模型还未加载完成')
+    return
+  }
+
+  try {
+    console.log(`直接播放动作文件: ${motionFile}`)
+
+    // 设置选中的动作
+    selectedMotion.value = motionFile
+
+    // 调用播放动作函数
+    await playMotion()
+  } catch (error) {
+    console.error('播放动作文件失败:', error)
   }
 }
 
@@ -1280,6 +1727,63 @@ async function playRandomExpression() {
   await playExpression()
 }
 
+// 设置表情（通过索引）
+async function setExpression(expressionIndex) {
+  if (!model || !isModelLoaded.value) {
+    console.warn('模型还未加载完成')
+    return
+  }
+
+  try {
+    console.log(`设置表情索引: ${expressionIndex}`)
+
+    // 检查模型是否有预定义的表情
+    const hasPreDefinedExpressions = model.internalModel.settings.expressions &&
+                                   model.internalModel.settings.expressions.length > 0
+
+    if (hasPreDefinedExpressions) {
+      // 对于有预定义表情的模型
+      const expressions = model.internalModel.settings.expressions
+      if (expressionIndex < expressions.length) {
+        const expression = expressions[expressionIndex]
+        console.log(`使用预定义表情: ${expression.Name}`)
+
+        try {
+          // 方法1: 直接使用表情管理器
+          const expressionManager = model.internalModel.motionManager.expressionManager
+          if (expressionManager && typeof expressionManager.setExpression === 'function') {
+            expressionManager.setExpression(expression.Name)
+            console.log(`通过表情管理器设置表情: ${expression.Name}`)
+          } else {
+            // 方法2: 使用模型的表情方法
+            const result = model.expression(expression.Name)
+            if (result && typeof result.play === 'function') {
+              result.play()
+              console.log(`通过 expression().play() 设置表情: ${expression.Name}`)
+            } else {
+              console.log(`通过 expression() 设置表情: ${expression.Name}`)
+            }
+          }
+        } catch (error) {
+          console.error('设置预定义表情失败:', error)
+          // 备用方法：使用索引
+          model.expression(expressionIndex)
+        }
+      }
+    } else {
+      // 对于没有预定义表情的模型，使用文件方式
+      const expressions = currentConfig.value.expressions
+      if (expressionIndex < expressions.length) {
+        const expression = expressions[expressionIndex]
+        selectedExpression.value = expression.file
+        await playExpression()
+      }
+    }
+  } catch (error) {
+    console.error('设置表情失败:', error)
+  }
+}
+
 // 重置表情到默认状态
 async function resetExpression() {
   if (!model || !isModelLoaded.value) {
@@ -1421,6 +1925,38 @@ function setVolume(volume) {
   }
 }
 
+// 更新全局音量（桌面模式使用）
+function updateGlobalVolume() {
+  setVolume(audioVolume.value)
+}
+
+// 显示用户友好的错误提示
+function showUserError(message, details = null) {
+  console.error('用户错误:', message, details)
+
+  // 在桌面模式下，可以显示更友好的错误提示
+  if (isDesktopPetMode.value) {
+    // 可以在这里添加桌面通知或其他用户反馈机制
+    if (window.desktopPet && typeof window.desktopPet.showNotification === 'function') {
+      window.desktopPet.showNotification(message, 'error')
+    }
+  } else {
+    // Web模式下可以使用alert或其他方式
+    alert(`错误: ${message}`)
+  }
+}
+
+// 显示成功提示
+function showUserSuccess(message) {
+  console.log('成功:', message)
+
+  if (isDesktopPetMode.value) {
+    if (window.desktopPet && typeof window.desktopPet.showNotification === 'function') {
+      window.desktopPet.showNotification(message, 'success')
+    }
+  }
+}
+
 // 设置音频播放位置
 function seekAudio(progress) {
   if (currentAudio.value && audioDuration.value > 0) {
@@ -1477,7 +2013,335 @@ function formatTime(seconds) {
 </script>
 
 <template>
-  <div style="padding: 20px; font-family: Arial, sans-serif;">
+  <!-- 桌面宠物模式 -->
+  <div v-if="isDesktopPetMode" class="desktop-pet-container">
+    <!-- Live2D 模型显示区域 -->
+    <div class="model-display">
+      <canvas
+        ref="canvas"
+        class="live2d-canvas"
+        :width="300"
+        :height="400"
+        style="width: 300px; height: 400px; display: block;"
+      ></canvas>
+
+      <!-- 模型状态指示器 -->
+      <div class="model-status" v-if="!isModelLoaded">
+        <div class="loading-spinner"></div>
+        <span>加载中...</span>
+      </div>
+    </div>
+
+    <!-- 桌面宠物控制组件 -->
+    <DesktopPetControls
+      :selected-model="currentModelName"
+      :is-model-loaded="isModelLoaded"
+      @model-change="changeModel"
+      @scale-change="handleScaleChange"
+      @opacity-change="handleOpacityChange"
+      @position-lock-change="handlePositionLockChange"
+      @always-on-top-change="handleAlwaysOnTopChange"
+      @refit-model="refitModel"
+    >
+      <!-- 表情控制内容 -->
+      <template #expressions-content>
+        <div class="expressions-controls">
+          <!-- 表情选择 -->
+          <div class="control-group">
+            <label>选择表情:</label>
+            <select v-model="selectedExpression" :disabled="!isModelLoaded">
+              <option value="">-- 请选择表情 --</option>
+              <option
+                v-for="expression in currentConfig.expressions"
+                :key="expression.file"
+                :value="expression.file"
+              >
+                {{ expression.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 表情控制按钮 -->
+          <div class="control-group">
+            <div class="button-row">
+              <button
+                @click="playExpression"
+                :disabled="!isModelLoaded || !selectedExpression"
+                class="control-btn primary"
+              >
+                播放表情
+              </button>
+              <button
+                @click="playRandomExpression"
+                :disabled="!isModelLoaded"
+                class="control-btn secondary"
+              >
+                随机表情
+              </button>
+              <button
+                @click="resetExpression"
+                :disabled="!isModelLoaded"
+                class="control-btn tertiary"
+              >
+                重置表情
+              </button>
+            </div>
+          </div>
+
+          <!-- 表情网格（快速选择） -->
+          <div class="expressions-grid">
+            <button
+              v-for="expression in currentModelConfig.expressions"
+              :key="expression.index"
+              @click="setExpression(expression.index)"
+              class="expression-btn"
+              :disabled="!isModelLoaded"
+            >
+              {{ expression.name }}
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- 动作控制内容 -->
+      <template #motions-content>
+        <div class="motions-controls">
+          <!-- 动作选择 -->
+          <div class="control-group">
+            <label>选择动作:</label>
+            <select v-model="selectedMotion" :disabled="!isModelLoaded">
+              <option value="">-- 请选择动作 --</option>
+              <option
+                v-for="motion in currentConfig.motions"
+                :key="motion.file"
+                :value="motion.file"
+              >
+                {{ motion.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 动作控制按钮 -->
+          <div class="control-group">
+            <div class="button-row">
+              <button
+                @click="playMotion"
+                :disabled="!isModelLoaded || !selectedMotion"
+                class="control-btn primary"
+              >
+                播放动作
+              </button>
+              <button
+                @click="playRandomMotion"
+                :disabled="!isModelLoaded"
+                class="control-btn secondary"
+              >
+                随机动作
+              </button>
+            </div>
+          </div>
+
+          <!-- 动作网格（快速选择） -->
+          <div class="motions-grid">
+            <button
+              v-for="motion in currentModelConfig.motions"
+              :key="motion.file"
+              @click="playMotionFile(motion.file)"
+              class="motion-btn"
+              :disabled="!isModelLoaded"
+            >
+              {{ motion.name }}
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- 音频控制内容 -->
+      <template #audio-content>
+        <div class="audio-controls">
+          <!-- 音频选择 -->
+          <div class="control-group" v-if="hasAudioSupport">
+            <label>选择音频:</label>
+            <select v-model="selectedSound" :disabled="!isModelLoaded">
+              <option value="">-- 请选择音频 --</option>
+              <option
+                v-for="sound in currentConfig.sounds"
+                :key="sound.file"
+                :value="sound.file"
+              >
+                {{ sound.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 播放控制按钮 -->
+          <div class="control-group" v-if="hasAudioSupport">
+            <div class="button-row">
+              <button
+                @click="playSelectedAudio"
+                :disabled="!isModelLoaded || !selectedSound"
+                class="control-btn primary"
+              >
+                ▶️ 播放
+              </button>
+              <button
+                @click="isPaused ? resumeAudio() : pauseAudio()"
+                :disabled="!isModelLoaded || !currentAudio"
+                class="control-btn secondary"
+              >
+                {{ isPaused ? '▶️ 继续' : '⏸️ 暂停' }}
+              </button>
+              <button
+                @click="stopAudio"
+                :disabled="!isModelLoaded || !currentAudio"
+                class="control-btn danger"
+              >
+                ⏹️ 停止
+              </button>
+            </div>
+          </div>
+
+          <!-- 音量控制 -->
+          <div class="control-group">
+            <label>音量: {{ Math.round(audioVolume * 100) }}%</label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              v-model="audioVolume"
+              @input="updateGlobalVolume"
+            >
+          </div>
+
+          <!-- 播放进度 -->
+          <div class="control-group" v-if="currentAudio">
+            <label>进度: {{ formatTime(audioCurrentTime) }} / {{ formatTime(audioDuration) }}</label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              v-model="audioProgress"
+              @input="seekAudio(audioProgress)"
+            >
+          </div>
+
+          <!-- 播放状态 -->
+          <div class="control-group status-display">
+            <span v-if="isPlaying" class="status playing">🎵 正在播放</span>
+            <span v-else-if="isPaused" class="status paused">⏸️ 已暂停</span>
+            <span v-else class="status stopped">⏹️ 已停止</span>
+          </div>
+
+          <!-- 无音频支持提示 -->
+          <div v-if="!hasAudioSupport" class="control-group">
+            <p class="no-audio-message">当前模型不支持音频功能</p>
+          </div>
+        </div>
+      </template>
+
+      <!-- 状态信息内容 -->
+      <template #status-content>
+        <div class="status-info">
+          <div class="status-item">
+            <span class="label">当前模型:</span>
+            <span class="value">{{ currentConfig.name }}</span>
+          </div>
+          <div class="status-item">
+            <span class="label">模型状态:</span>
+            <span class="value" :class="{ 'loaded': isModelLoaded, 'loading': !isModelLoaded }">
+              {{ isModelLoaded ? '✅ 已加载' : '⏳ 加载中' }}
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="label">动作数量:</span>
+            <span class="value">{{ currentConfig.motions.length }}</span>
+          </div>
+          <div class="status-item">
+            <span class="label">表情数量:</span>
+            <span class="value">{{ currentConfig.expressions.length }}</span>
+          </div>
+          <div class="status-item">
+            <span class="label">音频数量:</span>
+            <span class="value">{{ currentConfig.sounds.length }}</span>
+          </div>
+          <div class="status-item">
+            <span class="label">音频支持:</span>
+            <span class="value">{{ hasAudioSupport ? '✅ 是' : '❌ 否' }}</span>
+          </div>
+          <div class="status-item" v-if="model">
+            <span class="label">模型缩放:</span>
+            <span class="value">{{ model.scale.x.toFixed(2) }}</span>
+          </div>
+          <div class="status-item" v-if="model">
+            <span class="label">模型位置:</span>
+            <span class="value">({{ model.position.x.toFixed(0) }}, {{ model.position.y.toFixed(0) }})</span>
+          </div>
+        </div>
+      </template>
+
+      <!-- 口型同步内容 -->
+      <template #lipsync-content>
+        <div class="lipsync-controls">
+          <!-- 音频文件信息 -->
+          <div class="control-group">
+            <label>测试音频:</label>
+            <span class="audio-info">{{ audioFile ? 'test.wav (内置测试音频)' : '未加载音频文件' }}</span>
+          </div>
+
+          <!-- 口型同步控制按钮 -->
+          <div class="control-group">
+            <div class="button-row">
+              <button
+                @click="startSpeaking"
+                :disabled="!model || !isModelLoaded || isSpeaking || !audioFile"
+                class="lipsync-btn primary"
+              >
+                {{ isSpeaking ? '正在说话...' : '🎤 开始说话' }}
+              </button>
+              <button
+                @click="stopSpeaking"
+                :disabled="!isSpeaking"
+                class="lipsync-btn secondary"
+              >
+                🛑 停止说话
+              </button>
+            </div>
+          </div>
+
+          <!-- 敏感度调节 -->
+          <div class="control-group">
+            <label>口型敏感度: {{ lipSyncSensitivity }}</label>
+            <input
+              type="range"
+              min="10"
+              max="100"
+              step="5"
+              v-model="lipSyncSensitivity"
+            >
+            <div class="sensitivity-labels">
+              <span>低敏感度</span>
+              <span>高敏感度</span>
+            </div>
+          </div>
+
+          <!-- 状态指示器 -->
+          <div class="control-group status-display">
+            <span v-if="isSpeaking" class="status speaking">🎙️ 正在分析音频并同步口型</span>
+            <span v-else class="status idle">💤 口型同步待机中</span>
+          </div>
+        </div>
+      </template>
+    </DesktopPetControls>
+  </div>
+
+  <!-- 传统 Web 模式 -->
+  <div v-else style="padding: 20px; font-family: Arial, sans-serif;">
+    <!-- 图标展示区域（开发模式） -->
+    <div v-if="isDevelopmentMode" style="margin-bottom: 20px; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: #f0f8ff;">
+      <IconShowcase />
+    </div>
+
     <!-- 模型选择区域 -->
     <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
       <h3 style="margin: 0 0 10px 0; color: #333;">模型选择</h3>
@@ -1506,10 +2370,18 @@ function formatTime(seconds) {
     <!-- Live2D 画布 -->
     <div style="text-align: center; margin-bottom: 20px;">
       <canvas
-        style="border: 2px solid #333; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
         ref="canvas"
-        width="600"
-        height="600"
+        :width="600"
+        :height="600"
+        style="
+          width: 600px;
+          height: 600px;
+          border: 2px solid #333;
+          border-radius: 8px;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+          display: block;
+          margin: 0 auto;
+        "
       ></canvas>
     </div>
     
@@ -1917,6 +2789,359 @@ select:focus {
 @media (max-width: 768px) {
   .control-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ==================== 桌面宠物模式样式 ==================== */
+
+.desktop-pet-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+.model-display {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live2d-canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  /* 允许拖拽整个画布区域 */
+  -webkit-app-region: drag;
+}
+
+.model-status {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* 桌面宠物控制面板样式 */
+.control-group {
+  margin-bottom: 12px;
+}
+
+.control-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  color: #333;
+}
+
+.control-group select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.button-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 60px;
+}
+
+.control-btn.primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.control-btn.secondary {
+  background-color: #28a745;
+  color: white;
+}
+
+.control-btn.tertiary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.control-btn.danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.control-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.motions-grid,
+.expressions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.motion-btn,
+.expression-btn {
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f8f9fa;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.motion-btn:hover:not(:disabled),
+.expression-btn:hover:not(:disabled) {
+  background: #e9ecef;
+  transform: translateY(-1px);
+}
+
+.motion-btn:disabled,
+.expression-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status-display {
+  text-align: center;
+  font-size: 11px;
+}
+
+.status.playing {
+  color: #28a745;
+}
+
+.status.paused {
+  color: #ffc107;
+}
+
+.status.stopped {
+  color: #6c757d;
+}
+
+.status.speaking {
+  color: #28a745;
+}
+
+.status.idle {
+  color: #6c757d;
+}
+
+.audio-info {
+  font-size: 11px;
+  color: #666;
+}
+
+.no-audio-message {
+  text-align: center;
+  color: #6c757d;
+  font-size: 11px;
+  margin: 0;
+}
+
+.sensitivity-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.refit-btn {
+  width: 100%;
+  padding: 6px 8px;
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refit-btn:hover {
+  background-color: #138496;
+  transform: translateY(-1px);
+}
+
+.loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* === 桌面宠物控制面板内容样式 === */
+
+.expressions-grid,
+.motions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.expression-btn,
+.motion-btn {
+  padding: 8px 12px;
+  background: rgba(52, 152, 219, 0.8);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expression-btn:hover,
+.motion-btn:hover {
+  background: rgba(52, 152, 219, 1);
+  transform: translateY(-1px);
+}
+
+.audio-controls,
+.lipsync-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+}
+
+.control-group input[type="range"] {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #3498db;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.lipsync-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.lipsync-btn.primary {
+  background: #27ae60;
+  color: white;
+}
+
+.lipsync-btn.primary:hover:not(:disabled) {
+  background: #2ecc71;
+}
+
+.lipsync-btn.secondary {
+  background: #e74c3c;
+  color: white;
+}
+
+.lipsync-btn.secondary:hover:not(:disabled) {
+  background: #c0392b;
+}
+
+.lipsync-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* === 桌面宠物模式下的全局样式调整 === */
+
+body.desktop-pet-mode {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  overflow: hidden;
+  -webkit-app-region: drag;
+}
+
+body.desktop-pet-mode * {
+  -webkit-app-region: no-drag;
+}
+
+body.desktop-pet-mode .live2d-canvas {
+  -webkit-app-region: drag;
+}
+
+/* === 响应式调整 === */
+@media (max-width: 400px) {
+  .expressions-grid,
+  .motions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  }
+
+  .expression-btn,
+  .motion-btn {
+    padding: 6px 8px;
+    font-size: 11px;
   }
 }
 </style>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=300, height=400, user-scalable=no">
+  <title>Live2D 桌面宠物测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 300px;
+      height: 400px;
+      background: transparent;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      position: relative;
+    }
+    
+    .pet-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(80, 227, 194, 0.1));
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    
+    .model-area {
+      width: 100%;
+      height: 80%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    
+    .live2d-placeholder {
+      width: 200px;
+      height: 200px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .controls-area {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .control-btn {
+      width: 40px;
+      height: 40px;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .control-btn:hover {
+      background: rgba(0, 0, 0, 0.9);
+      transform: scale(1.1);
+    }
+    
+    .status-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+    
+    .debug-info {
+      position: absolute;
+      bottom: 60px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #00ff00;
+      padding: 8px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      max-width: 200px;
+      display: none;
+    }
+    
+    .debug-info.show {
+      display: block;
+    }
+    
+    .notification {
+      position: absolute;
+      top: 50px;
+      left: 10px;
+      right: 10px;
+      background: rgba(52, 152, 219, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      text-align: center;
+      transform: translateY(-100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    
+    .notification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    /* 拖拽相关样式 */
+    .dragging {
+      cursor: move !important;
+    }
+    
+    .no-drag {
+      -webkit-app-region: no-drag;
+    }
+    
+    .drag {
+      -webkit-app-region: drag;
+    }
+  </style>
+</head>
+<body>
+  <div class="pet-container drag">
+    <!-- 状态栏 -->
+    <div class="status-bar">
+      🐾 Live2D 桌面宠物测试模式
+    </div>
+    
+    <!-- 模型显示区域 -->
+    <div class="model-area">
+      <div class="live2d-placeholder">
+        🦊
+      </div>
+    </div>
+    
+    <!-- 控制按钮 -->
+    <div class="controls-area no-drag">
+      <button class="control-btn" onclick="toggleExpression()" title="表情">🎭</button>
+      <button class="control-btn" onclick="playMotion()" title="动作">🎬</button>
+      <button class="control-btn" onclick="toggleAudio()" title="音频">🔊</button>
+      <button class="control-btn" onclick="toggleLipSync()" title="口型同步">🗣️</button>
+      <button class="control-btn" onclick="toggleSettings()" title="设置">⚙️</button>
+      <button class="control-btn" onclick="toggleDebug()" title="调试">🐛</button>
+    </div>
+    
+    <!-- 调试信息 -->
+    <div class="debug-info" id="debugInfo">
+      <div>模式: 桌面宠物测试</div>
+      <div>拖拽: 启用</div>
+      <div>位置: <span id="position">0, 0</span></div>
+      <div>状态: <span id="status">就绪</span></div>
+    </div>
+    
+    <!-- 通知 -->
+    <div class="notification" id="notification"></div>
+  </div>
+
+  <script>
+    // 桌面宠物测试脚本
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+    let debugMode = false;
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🎭 桌面宠物测试页面已加载');
+      showNotification('桌面宠物测试模式已启动');
+      
+      // 设置拖拽功能
+      setupDragFunctionality();
+      
+      // 设置键盘快捷键
+      setupKeyboardShortcuts();
+      
+      // 更新调试信息
+      updateDebugInfo();
+    });
+    
+    // 拖拽功能
+    function setupDragFunctionality() {
+      document.addEventListener('mousedown', function(e) {
+        if (e.target.closest('.no-drag')) return;
+        
+        isDragging = true;
+        dragOffset.x = e.clientX;
+        dragOffset.y = e.clientY;
+        document.body.classList.add('dragging');
+        updateStatus('拖拽中...');
+        e.preventDefault();
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - dragOffset.x;
+        const deltaY = e.clientY - dragOffset.y;
+        
+        // 模拟窗口移动
+        console.log(`模拟移动: (${deltaX}, ${deltaY})`);
+        updatePosition(e.clientX, e.clientY);
+        
+        dragOffset.x = e.clientX;
+        dragOffset.y = e.clientY;
+      });
+      
+      document.addEventListener('mouseup', function() {
+        if (isDragging) {
+          isDragging = false;
+          document.body.classList.remove('dragging');
+          updateStatus('就绪');
+          showNotification('位置已更新');
+        }
+      });
+    }
+    
+    // 键盘快捷键
+    function setupKeyboardShortcuts() {
+      document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+          e.preventDefault();
+          toggleDebug();
+        }
+        
+        if (e.key === 'Escape') {
+          hideAllPanels();
+        }
+      });
+    }
+    
+    // 控制函数
+    function toggleExpression() {
+      showNotification('切换表情 🎭');
+      updateStatus('表情变化');
+      // 这里可以集成真实的 Live2D 表情控制
+    }
+    
+    function playMotion() {
+      showNotification('播放动作 🎬');
+      updateStatus('动作播放');
+      // 这里可以集成真实的 Live2D 动作播放
+    }
+    
+    function toggleAudio() {
+      showNotification('音频控制 🔊');
+      updateStatus('音频切换');
+      // 这里可以集成音频控制
+    }
+    
+    function toggleLipSync() {
+      showNotification('口型同步 🗣️');
+      updateStatus('口型同步');
+      // 这里可以集成口型同步功能
+    }
+    
+    function toggleSettings() {
+      showNotification('打开设置 ⚙️');
+      updateStatus('设置面板');
+      // 这里可以打开设置面板
+    }
+    
+    function toggleDebug() {
+      debugMode = !debugMode;
+      const debugInfo = document.getElementById('debugInfo');
+      debugInfo.classList.toggle('show', debugMode);
+      showNotification(debugMode ? '调试模式已开启' : '调试模式已关闭');
+    }
+    
+    function hideAllPanels() {
+      showNotification('隐藏所有面板');
+      updateStatus('面板隐藏');
+    }
+    
+    // 工具函数
+    function showNotification(message) {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.classList.add('show');
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 2000);
+    }
+    
+    function updateStatus(status) {
+      const statusElement = document.getElementById('status');
+      if (statusElement) {
+        statusElement.textContent = status;
+      }
+    }
+    
+    function updatePosition(x, y) {
+      const positionElement = document.getElementById('position');
+      if (positionElement) {
+        positionElement.textContent = `${x}, ${y}`;
+      }
+    }
+    
+    function updateDebugInfo() {
+      setInterval(() => {
+        if (debugMode) {
+          updatePosition(window.screenX || 0, window.screenY || 0);
+        }
+      }, 1000);
+    }
+    
+    // 模拟 Live2D 动画
+    function animatePlaceholder() {
+      const placeholder = document.querySelector('.live2d-placeholder');
+      const emojis = ['🦊', '🐱', '🐰', '🐼', '🐨', '🦝'];
+      let currentIndex = 0;
+      
+      setInterval(() => {
+        currentIndex = (currentIndex + 1) % emojis.length;
+        placeholder.textContent = emojis[currentIndex];
+      }, 3000);
+    }
+    
+    // 启动动画
+    animatePlaceholder();
+  </script>
+</body>
+</html>
