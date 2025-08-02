@@ -16,9 +16,23 @@ class DesktopPetSimulator {
       isLocked: false
     }
 
+    // URL参数配置
+    this.initialScale = null
+    this.initialOpacity = null
+    this.targetFPS = 60
+
     this.callbacks = {
       positionLock: new Set(),
-      alwaysOnTop: new Set()
+      alwaysOnTop: new Set(),
+      changeModel: new Set(),
+      playExpression: new Set(),
+      playMotion: new Set(),
+      startSpeaking: new Set(),
+      stopSpeaking: new Set(),
+      setLipSyncSensitivity: new Set(),
+      setModelScale: new Set(),
+      setOpacity: new Set(),
+      refitModel: new Set()
     }
 
     this.init()
@@ -29,6 +43,9 @@ class DesktopPetSimulator {
    */
   init() {
     console.log('🎭 桌面模型模拟器已启动')
+
+    // 处理URL参数
+    this.processUrlParams()
 
     // 设置页面样式模拟桌面模型
     this.setupPetMode()
@@ -41,6 +58,42 @@ class DesktopPetSimulator {
 
     // 模拟窗口控制
     this.setupWindowControls()
+  }
+
+  /**
+   * 处理URL参数
+   */
+  processUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search)
+
+    // 处理缩放参数
+    const scale = urlParams.get('scale')
+    if (scale && !isNaN(parseFloat(scale))) {
+      const scaleValue = Math.max(0.5, Math.min(2.0, parseFloat(scale)))
+      this.initialScale = scaleValue
+      console.log(`从URL设置初始缩放: ${scaleValue}`)
+    }
+
+    // 处理透明度参数
+    const opacity = urlParams.get('opacity')
+    if (opacity && !isNaN(parseFloat(opacity))) {
+      const opacityValue = Math.max(0.1, Math.min(1.0, parseFloat(opacity)))
+      this.initialOpacity = opacityValue
+      console.log(`从URL设置初始透明度: ${opacityValue}`)
+    }
+
+    // 处理FPS参数
+    const fps = urlParams.get('fps')
+    if (fps && !isNaN(parseInt(fps))) {
+      const fpsValue = Math.max(15, Math.min(120, parseInt(fps)))
+      this.targetFPS = fpsValue
+      console.log(`从URL设置目标FPS: ${fpsValue}`)
+    }
+
+    // 输出所有URL参数（调试用）
+    if (urlParams.toString()) {
+      console.log('URL参数:', Object.fromEntries(urlParams))
+    }
   }
 
   /**
@@ -325,6 +378,236 @@ class DesktopPetSimulator {
   isDevelopment() {
     return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   }
+
+  // === 模型控制 API ===
+
+  /**
+   * 获取应用状态
+   */
+  getAppState() {
+    return Promise.resolve({
+      isModelLoaded: false,
+      currentModel: null,
+      isSpeaking: false
+    })
+  }
+
+  /**
+   * 获取模型配置
+   */
+  getModelConfigs() {
+    return Promise.resolve({
+      models: ['hiyori', 'koharu', 'haruto', 'natori', 'shizuku', 'wanko']
+    })
+  }
+
+  /**
+   * 通知模型加载完成
+   */
+  notifyModelLoaded(modelName) {
+    console.log(`模型加载完成: ${modelName}`)
+    return Promise.resolve(true)
+  }
+
+  /**
+   * 通知口型同步状态变化
+   */
+  notifySpeakingStateChanged(isSpeaking) {
+    console.log(`口型同步状态变化: ${isSpeaking}`)
+    return Promise.resolve(true)
+  }
+
+  /**
+   * 通知表情播放完成
+   */
+  notifyExpressionPlayed(expressionFile) {
+    console.log(`表情播放完成: ${expressionFile}`)
+    return Promise.resolve(true)
+  }
+
+  /**
+   * 通知动作播放完成
+   */
+  notifyMotionPlayed(motionFile) {
+    console.log(`动作播放完成: ${motionFile}`)
+    return Promise.resolve(true)
+  }
+
+  /**
+   * 通知模型缩放变化
+   */
+  notifyModelScaleChanged(scale) {
+    console.log(`模型缩放变化: ${scale}`)
+    return Promise.resolve(true)
+  }
+
+  /**
+   * 通知透明度变化
+   */
+  notifyOpacityChanged(opacity) {
+    console.log(`透明度变化: ${opacity}`)
+    return Promise.resolve(true)
+  }
+
+  /**
+   * 通知位置锁定状态变化
+   */
+  notifyPositionLockChanged(isLocked) {
+    console.log(`位置锁定状态变化: ${isLocked}`)
+    return Promise.resolve(true)
+  }
+
+  /**
+   * 通知口型同步敏感度变化
+   */
+  notifyLipSyncSensitivityChanged(sensitivity) {
+    console.log(`口型同步敏感度变化: ${sensitivity}`)
+    return Promise.resolve(true)
+  }
+
+  // === 事件监听 API ===
+
+  /**
+   * 监听模型切换命令
+   */
+  onChangeModel(callback) {
+    this.callbacks.changeModel.add(callback)
+  }
+
+  /**
+   * 监听表情播放命令
+   */
+  onPlayExpression(callback) {
+    this.callbacks.playExpression.add(callback)
+  }
+
+  /**
+   * 监听动作播放命令
+   */
+  onPlayMotion(callback) {
+    this.callbacks.playMotion.add(callback)
+  }
+
+  /**
+   * 监听开始说话命令
+   */
+  onStartSpeaking(callback) {
+    this.callbacks.startSpeaking.add(callback)
+  }
+
+  /**
+   * 监听停止说话命令
+   */
+  onStopSpeaking(callback) {
+    this.callbacks.stopSpeaking.add(callback)
+  }
+
+  /**
+   * 监听口型同步敏感度设置命令
+   */
+  onSetLipSyncSensitivity(callback) {
+    this.callbacks.setLipSyncSensitivity.add(callback)
+  }
+
+  /**
+   * 监听模型缩放设置命令
+   */
+  onSetModelScale(callback) {
+    this.callbacks.setModelScale.add(callback)
+  }
+
+  /**
+   * 监听透明度设置命令
+   */
+  onSetOpacity(callback) {
+    this.callbacks.setOpacity.add(callback)
+  }
+
+  /**
+   * 监听重新调整模型大小命令
+   */
+  onRefitModel(callback) {
+    this.callbacks.refitModel.add(callback)
+  }
+
+  // === 模拟触发事件的方法（用于测试） ===
+
+  /**
+   * 模拟触发模型切换
+   */
+  simulateChangeModel(modelName) {
+    this.callbacks.changeModel.forEach(callback => callback(modelName))
+  }
+
+  /**
+   * 模拟触发表情播放
+   */
+  simulatePlayExpression(expressionFile) {
+    this.callbacks.playExpression.forEach(callback => callback(expressionFile))
+  }
+
+  /**
+   * 模拟触发动作播放
+   */
+  simulatePlayMotion(motionFile) {
+    this.callbacks.playMotion.forEach(callback => callback(motionFile))
+  }
+
+  /**
+   * 模拟触发开始说话
+   */
+  simulateStartSpeaking() {
+    this.callbacks.startSpeaking.forEach(callback => callback())
+  }
+
+  /**
+   * 模拟触发停止说话
+   */
+  simulateStopSpeaking() {
+    this.callbacks.stopSpeaking.forEach(callback => callback())
+  }
+
+  /**
+   * 获取初始配置（从URL参数解析）
+   */
+  getInitialConfig() {
+    return {
+      scale: this.initialScale,
+      opacity: this.initialOpacity,
+      fps: this.targetFPS
+    }
+  }
+
+  /**
+   * 显示支持的URL参数帮助信息
+   */
+  showUrlParamsHelp() {
+    const params = getSupportedUrlParams()
+    console.group('🔗 支持的URL参数:')
+
+    Object.entries(params).forEach(([param, config]) => {
+      console.group(`📌 ${param}`)
+      console.log(`描述: ${config.description}`)
+      console.log(`示例: ${config.example}`)
+      if (config.values) {
+        console.log('可选值:')
+        Object.entries(config.values).forEach(([value, desc]) => {
+          console.log(`  • ${value}: ${desc}`)
+        })
+      }
+      console.groupEnd()
+    })
+
+    console.groupEnd()
+
+    // 显示当前URL参数
+    const currentParams = new URLSearchParams(window.location.search)
+    if (currentParams.toString()) {
+      console.log('当前URL参数:', Object.fromEntries(currentParams))
+    } else {
+      console.log('当前没有URL参数')
+    }
+  }
 }
 
 // 创建全局模拟器实例
@@ -351,6 +634,98 @@ export function initDesktopPetSimulator() {
 }
 
 /**
+ * 获取所有支持的URL参数说明
+ */
+export function getSupportedUrlParams() {
+  return {
+    // 模式参数
+    mode: {
+      description: '运行模式（默认：web）',
+      values: {
+        'pet': '桌面模型模式（启用模拟器）',
+        'simulator': '桌面模型模拟器模式',
+        'web': '传统网页模式（默认）',
+        'traditional': '传统网页模式'
+      },
+      example: '?mode=pet',
+      default: 'web'
+    },
+
+    // 模型参数
+    model: {
+      description: '初始加载的模型',
+      values: {
+        'idol': '偶像模型',
+        'lanhei': '兰黑模型',
+        'hibiki': '响模型',
+        'hiyori': '日和模型',
+        'mark': '马克模型',
+        'natori': '名取模型',
+        'kei_basic': 'Kei基础模型',
+        'kei_vowels': 'Kei元音模型'
+      },
+      example: '?model=hiyori'
+    },
+
+    // 调试参数
+    debug: {
+      description: '启用调试模式（显示边框和调试信息）',
+      values: {
+        'true': '启用调试模式',
+        'false': '禁用调试模式（默认）'
+      },
+      example: '?debug=true'
+    },
+
+    // 兼容性参数
+    pet: {
+      description: '启用桌面模型模式（兼容旧版本）',
+      values: {
+        'true': '启用桌面模型模式'
+      },
+      example: '?pet=true'
+    },
+
+    'desktop-pet': {
+      description: '启用桌面模型模式（兼容旧版本）',
+      values: {
+        'true': '启用桌面模型模式'
+      },
+      example: '?desktop-pet=true'
+    },
+
+    // 性能参数
+    fps: {
+      description: '目标帧率',
+      values: {
+        '30': '30 FPS',
+        '60': '60 FPS（默认）',
+        '120': '120 FPS'
+      },
+      example: '?fps=30'
+    },
+
+    // 缩放参数
+    scale: {
+      description: '初始模型缩放比例',
+      values: {
+        '0.5-2.0': '缩放比例范围'
+      },
+      example: '?scale=1.2'
+    },
+
+    // 透明度参数
+    opacity: {
+      description: '初始模型透明度',
+      values: {
+        '0.1-1.0': '透明度范围'
+      },
+      example: '?opacity=0.8'
+    }
+  }
+}
+
+/**
  * 检查是否应该启用模拟器
  */
 export function shouldUseSimulator() {
@@ -372,8 +747,9 @@ export function shouldUseSimulator() {
     return true
   }
 
-  // 默认行为：在浏览器环境中启用模拟器
-  return !window.require && !window.electronAPI
+  // 默认行为：如果没有指定任何模式参数，默认为web模式（不启用模拟器）
+  // 只有在真正的 Electron 环境中才自动启用桌面模型功能
+  return false
 }
 
 export default DesktopPetSimulator

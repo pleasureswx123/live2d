@@ -885,6 +885,16 @@ onMounted(async () => {
   try {
     console.log('=== 应用开始初始化 ===')
 
+    // === 检查URL参数 ===
+    const urlParams = new URLSearchParams(window.location.search)
+
+    // 检查模型参数
+    const modelParam = urlParams.get('model')
+    if (modelParam && modelConfigs[modelParam]) {
+      currentModelName.value = modelParam
+      console.log(`从URL参数设置初始模型: ${modelParam}`)
+    }
+
     // === 检查依赖库 ===
     if (!checkLive2DLibraries()) {
       throw new Error('Live2D依赖库检查失败，请刷新页面重试')
@@ -894,9 +904,18 @@ onMounted(async () => {
     // 检查是否应该使用模拟器
     if (shouldUseSimulator()) {
       console.log('🎭 启动桌面模型模拟器模式')
-      initDesktopPetSimulator()
+      const simulator = initDesktopPetSimulator()
       isSimulatorMode.value = true
       isDesktopPetMode.value = true
+
+      // 获取初始配置
+      const initialConfig = simulator.getInitialConfig()
+      console.log('模拟器初始配置:', initialConfig)
+
+      // 显示URL参数帮助（开发模式下）
+      if (isDevelopmentMode.value) {
+        simulator.showUrlParamsHelp()
+      }
     } else {
       // 检查是否在真实的 Electron 环境中运行
       isElectron.value = !!(window.desktopPet || window.electronAPI)
@@ -1272,45 +1291,45 @@ function calculateAutoScale(model, canvasWidth, canvasHeight) {
     // 先设置一个基础缩放来获取准确的边界框
     model.scale.set(1.0)
 
-    // 获取模型的边界框
-    const bounds = model.getBounds()
-    console.log('模型边界框:', bounds)
+    // 等待一帧确保模型状态更新
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        try {
+          // 获取模型的边界框
+          const bounds = model.getBounds()
+          console.log('模型边界框:', bounds)
 
-    if (!bounds || bounds.width === 0 || bounds.height === 0) {
-      console.warn('无法获取模型边界框，使用默认缩放')
-      return getDefaultScale(currentModelName.value)
-    }
+          if (!bounds || bounds.width === 0 || bounds.height === 0) {
+            console.warn('无法获取模型边界框，使用默认缩放')
+            resolve(getDefaultScale(currentModelName.value))
+            return
+          }
 
-    // 计算模型原始尺寸
-    const modelWidth = bounds.width
-    const modelHeight = bounds.height
+          // 计算缩放比例，留出一些边距
+          const padding = 20
+          const scaleX = (canvasWidth - padding * 2) / bounds.width
+          const scaleY = (canvasHeight - padding * 2) / bounds.height
+          const finalScale = Math.min(scaleX, scaleY, 1.0) // 限制最大缩放为1.0
 
-    // 设置目标尺寸（留出边距）
-    const targetWidth = canvasWidth * 1  // 使用 canvas 75% 的宽度
-    const targetHeight = canvasHeight * 1 // 使用 canvas 85% 的高度
+          console.log(`计算缩放: canvas=${canvasWidth}x${canvasHeight}, bounds=${bounds.width.toFixed(2)}x${bounds.height.toFixed(2)}, scale=${finalScale.toFixed(4)}`)
 
-    // 计算缩放比例（取较小值以确保模型完全显示）
-    const scaleX = targetWidth / modelWidth
-    const scaleY = targetHeight / modelHeight
-    const scale = Math.min(scaleX, scaleY)
+          // 如果计算出的缩放过小，使用默认值
+          if (finalScale < 0.02) {
+            console.warn('计算出的缩放过小，使用默认缩放')
+            resolve(getDefaultScale(currentModelName.value))
+            return
+          }
 
-    console.log(`模型尺寸: ${modelWidth.toFixed(2)} x ${modelHeight.toFixed(2)}`)
-    console.log(`目标尺寸: ${targetWidth.toFixed(2)} x ${targetHeight.toFixed(2)}`)
-    console.log(`计算缩放: scaleX=${scaleX.toFixed(4)}, scaleY=${scaleY.toFixed(4)}, 最终=${scale.toFixed(4)}`)
-
-    // 限制缩放范围，避免过大或过小
-    const finalScale = Math.max(0.01, Math.min(1.5, scale))
-
-    // 如果计算出的缩放过小，使用默认值
-    if (finalScale < 0.02) {
-      console.warn('计算出的缩放过小，使用默认缩放')
-      return getDefaultScale(currentModelName.value)
-    }
-
-    return finalScale
+          resolve(finalScale)
+        } catch (error) {
+          console.error('获取模型边界框失败:', error)
+          resolve(getDefaultScale(currentModelName.value))
+        }
+      })
+    })
   } catch (error) {
     console.error('计算自动缩放失败:', error)
-    return getDefaultScale(currentModelName.value)
+    return Promise.resolve(getDefaultScale(currentModelName.value))
   }
 }
 
@@ -1330,35 +1349,44 @@ function getDefaultScale(modelName) {
 }
 
 // 自动调整模型位置和缩放
-function autoFitModel(model, canvasWidth, canvasHeight) {
+async function autoFitModel(model, canvasWidth, canvasHeight) {
   try {
     // 计算自动缩放
-    const autoScale = calculateAutoScale(model, canvasWidth, canvasHeight)
+    const autoScale = await calculateAutoScale(model, canvasWidth, canvasHeight)
     model.scale.set(autoScale)
 
     // 等待一帧以确保缩放生效
-    requestAnimationFrame(() => {
-      try {
-        // 重新获取缩放后的边界框
-        const scaledBounds = model.getBounds()
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        try {
+          // 重新获取缩放后的边界框
+          const scaledBounds = model.getBounds()
 
-        // 计算居中位置
-        const centerX = canvasWidth / 2
-        const centerY = canvasHeight / 2
+          if (scaledBounds && scaledBounds.width > 0 && scaledBounds.height > 0) {
+            // 计算居中位置
+            const centerX = canvasWidth / 2
+            const centerY = canvasHeight / 2
 
-        // 设置模型位置
-        model.position.set(
-          centerX - scaledBounds.width / 2,
-          centerY - scaledBounds.height / 2
-        )
+            // 设置模型位置
+            model.position.set(
+              centerX - scaledBounds.width / 2,
+              centerY - scaledBounds.height / 2
+            )
 
-        console.log(`模型自动调整完成: scale=${autoScale.toFixed(4)}, position=(${model.position.x.toFixed(2)}, ${model.position.y.toFixed(2)})`)
-        console.log(`缩放后边界框: width=${scaledBounds.width.toFixed(2)}, height=${scaledBounds.height.toFixed(2)}`)
-      } catch (error) {
-        console.error('设置模型位置失败:', error)
-        // 使用简单的居中方案
-        model.position.set(canvasWidth / 2, canvasHeight / 2)
-      }
+            console.log(`模型自动调整完成: scale=${autoScale.toFixed(4)}, position=(${model.position.x.toFixed(2)}, ${model.position.y.toFixed(2)})`)
+            console.log(`缩放后边界框: width=${scaledBounds.width.toFixed(2)}, height=${scaledBounds.height.toFixed(2)}`)
+          } else {
+            console.warn('无法获取缩放后的边界框，使用简单居中')
+            model.position.set(canvasWidth / 2, canvasHeight / 2)
+          }
+          resolve()
+        } catch (error) {
+          console.error('设置模型位置失败:', error)
+          // 使用简单的居中方案
+          model.position.set(canvasWidth / 2, canvasHeight / 2)
+          resolve()
+        }
+      })
     })
   } catch (error) {
     console.error('自动调整模型失败:', error)
@@ -1467,7 +1495,7 @@ async function loadModel(modelName) {
     console.log(`Canvas 逻辑尺寸: ${canvasWidth} x ${canvasHeight}`)
 
     if (canvasWidth > 0 && canvasHeight > 0) {
-      autoFitModel(model, canvasWidth, canvasHeight)
+      await autoFitModel(model, canvasWidth, canvasHeight)
     } else {
       console.warn('Canvas尺寸无效，使用默认位置和缩放')
       const defaultScale = getDefaultScale(modelName)
@@ -2237,9 +2265,9 @@ function formatTime(seconds) {
   <!-- 传统 Web 模式 -->
   <div v-else style="padding: 20px; font-family: Arial, sans-serif;">
     <!-- 图标展示区域（开发模式） -->
-    <div v-if="isDevelopmentMode" style="margin-bottom: 20px; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: #f0f8ff;">
-      <IconShowcase />
-    </div>
+<!--    <div v-if="isDevelopmentMode" style="margin-bottom: 20px; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: #f0f8ff;">-->
+<!--      <IconShowcase />-->
+<!--    </div>-->
 
     <!-- 模型选择区域 -->
     <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
