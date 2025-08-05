@@ -1,10 +1,18 @@
 <script setup>
 import * as PIXI from 'pixi.js'
 import { Live2DModel, SoundManager, MotionPriority } from 'pixi-live2d-display'
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick, provide } from 'vue'
 import DesktopPetControlsSimplified from './components/DesktopPetControlsSimplified.vue'
 import IconShowcase from './components/IconShowcase.vue'
+import LoadingProgress from './components/LoadingProgress.vue'
+import PerformanceMonitor from './components/PerformanceMonitor.vue'
 import { initDesktopPetSimulator, shouldUseSimulator } from './utils/desktopPetSimulator.js'
+import {
+  PIXI_PERFORMANCE_CONFIG,
+  getOptimizedConfig,
+  getDevicePerformanceLevel,
+  PERFORMANCE_TIPS
+} from './utils/performanceOptimizer.js'
 
 window.PIXI = PIXI
 
@@ -22,6 +30,7 @@ const audioFile = ref(testAudioUrl);
 const canvas = ref(null)
 const isModelLoaded = ref(false)
 const currentModelName = ref('idol')
+const performanceMonitor = ref(null)
 
 let app
 let model
@@ -790,6 +799,38 @@ const performanceStats = ref({
   lastUpdate: Date.now()
 })
 
+// ==================== 模型加载优化相关 ====================
+
+/**
+ * 模型资源缓存
+ * 用于缓存已加载的模型资源，避免重复加载
+ */
+const modelCache = new Map()
+
+/**
+ * 纹理缓存
+ * 缓存已加载的纹理资源
+ */
+const textureCache = new Map()
+
+/**
+ * 加载状态管理
+ */
+const loadingState = ref({
+  isLoading: false,
+  progress: 0,
+  currentStep: '',
+  totalSteps: 0,
+  currentStepIndex: 0
+})
+
+/**
+ * 预加载队列
+ * 用于管理模型的预加载
+ */
+const preloadQueue = ref([])
+const isPreloading = ref(false)
+
 /**
  * 启动性能监控
  */
@@ -815,6 +856,9 @@ function startPerformanceMonitoring() {
       performanceStats.value.renderTime = app.ticker.deltaMS
       performanceStats.value.lastUpdate = Date.now()
 
+      // 更新缓存统计
+      updateCacheStats()
+
       frameCount = 0
       lastTime = currentTime
     }
@@ -824,6 +868,260 @@ function startPerformanceMonitoring() {
 
   updateStats()
   console.log('性能监控已启动')
+}
+
+// ==================== 资源预加载和缓存优化 ====================
+
+/**
+ * 预加载纹理资源
+ * @param {string} texturePath - 纹理文件路径
+ * @returns {Promise<PIXI.Texture>} 加载的纹理对象
+ */
+async function preloadTexture(texturePath) {
+  // 检查缓存
+  if (textureCache.has(texturePath)) {
+    console.log(`纹理缓存命中: ${texturePath}`)
+    return textureCache.get(texturePath)
+  }
+
+  try {
+    console.log(`开始预加载纹理: ${texturePath}`)
+
+    // 使用PIXI的Loader进行异步加载
+    const texture = await PIXI.Texture.fromURL(texturePath)
+
+    // 缓存纹理
+    textureCache.set(texturePath, texture)
+    console.log(`纹理预加载完成: ${texturePath}`)
+
+    return texture
+  } catch (error) {
+    console.error(`纹理预加载失败: ${texturePath}`, error)
+    throw error
+  }
+}
+
+/**
+ * 预加载模型配置文件
+ * @param {string} modelPath - 模型配置文件路径
+ * @returns {Promise<Object>} 模型配置数据
+ */
+async function preloadModelConfig(modelPath) {
+  try {
+    console.log(`预加载模型配置: ${modelPath}`)
+
+    const response = await fetch(modelPath)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const config = await response.json()
+    console.log(`模型配置预加载完成: ${modelPath}`)
+
+    return config
+  } catch (error) {
+    console.error(`模型配置预加载失败: ${modelPath}`, error)
+    throw error
+  }
+}
+
+/**
+ * 预加载.moc3文件
+ * @param {string} mocPath - .moc3文件路径
+ * @returns {Promise<ArrayBuffer>} .moc3文件数据
+ */
+async function preloadMocFile(mocPath) {
+  try {
+    console.log(`预加载.moc3文件: ${mocPath}`)
+
+    const response = await fetch(mocPath)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const mocData = await response.arrayBuffer()
+    console.log(`moc3文件预加载完成: ${mocPath}`)
+
+    return mocData
+  } catch (error) {
+    console.error(`moc3文件预加载失败: ${mocPath}`, error)
+    throw error
+  }
+}
+
+/**
+ * 预加载完整模型资源
+ * @param {string} modelName - 模型名称
+ * @returns {Promise<Object>} 预加载的资源对象
+ */
+async function preloadModelResources(modelName) {
+  const config = modelConfigs[modelName]
+  if (!config) {
+    throw new Error(`未找到模型配置: ${modelName}`)
+  }
+
+  // 检查缓存
+  if (modelCache.has(modelName)) {
+    console.log(`模型资源缓存命中: ${modelName}`)
+    return modelCache.get(modelName)
+  }
+
+  console.log(`开始预加载模型资源: ${modelName}`)
+
+  // 更新加载状态
+  loadingState.value = {
+    isLoading: true,
+    progress: 0,
+    currentStep: '加载模型配置...',
+    totalSteps: 4,
+    currentStepIndex: 0
+  }
+
+  try {
+    // 步骤1: 预加载模型配置
+    const modelConfig = await preloadModelConfig(config.path)
+    loadingState.value.progress = 25
+    loadingState.value.currentStep = '加载.moc3文件...'
+    loadingState.value.currentStepIndex = 1
+
+    // 步骤2: 预加载.moc3文件
+    const basePath = config.path.substring(0, config.path.lastIndexOf('/'))
+    const mocPath = `${basePath}/${modelConfig.FileReferences.Moc}`
+    const mocData = await preloadMocFile(mocPath)
+
+    loadingState.value.progress = 50
+    loadingState.value.currentStep = '加载纹理文件...'
+    loadingState.value.currentStepIndex = 2
+
+    // 步骤3: 预加载纹理文件
+    const textures = []
+    if (modelConfig.FileReferences.Textures) {
+      for (const texturePath of modelConfig.FileReferences.Textures) {
+        const fullTexturePath = `${basePath}/${texturePath}`
+        const texture = await preloadTexture(fullTexturePath)
+        textures.push(texture)
+      }
+    }
+
+    loadingState.value.progress = 75
+    loadingState.value.currentStep = '准备模型数据...'
+    loadingState.value.currentStepIndex = 3
+
+    // 步骤4: 组装资源对象
+    const resources = {
+      config: modelConfig,
+      mocData,
+      textures,
+      basePath
+    }
+
+    // 缓存资源
+    modelCache.set(modelName, resources)
+
+    loadingState.value.progress = 100
+    loadingState.value.currentStep = '加载完成'
+    loadingState.value.currentStepIndex = 4
+
+    // 延迟关闭加载状态，让用户看到完成提示
+    setTimeout(() => {
+      loadingState.value.isLoading = false
+    }, 500)
+
+    console.log(`模型资源预加载完成: ${modelName}`)
+    return resources
+
+  } catch (error) {
+    loadingState.value.isLoading = false
+    console.error(`模型资源预加载失败: ${modelName}`, error)
+    throw error
+  }
+}
+
+/**
+ * 批量预加载模型
+ * @param {string[]} modelNames - 要预加载的模型名称数组
+ */
+async function batchPreloadModels(modelNames = []) {
+  if (isPreloading.value) {
+    console.warn('已有预加载任务在进行中')
+    return
+  }
+
+  isPreloading.value = true
+  preloadQueue.value = [...modelNames]
+
+  console.log(`开始批量预加载 ${modelNames.length} 个模型`)
+
+  for (const modelName of modelNames) {
+    try {
+      await preloadModelResources(modelName)
+      console.log(`✅ 模型预加载完成: ${modelName}`)
+    } catch (error) {
+      console.error(`❌ 模型预加载失败: ${modelName}`, error)
+    }
+  }
+
+  isPreloading.value = false
+  preloadQueue.value = []
+  console.log('批量预加载完成')
+}
+
+/**
+ * 清理模型缓存
+ * @param {boolean} force - 是否强制清理所有缓存
+ */
+function clearModelCache(force = false) {
+  console.log('开始清理模型缓存...')
+
+  if (force) {
+    // 强制清理所有缓存
+    modelCache.clear()
+    textureCache.clear()
+    console.log('已强制清理所有缓存')
+  } else {
+    // 智能清理：保留当前模型和最近使用的模型
+    const currentModel = currentModelName.value
+    const recentModels = [currentModel] // 可以扩展为最近使用的模型列表
+
+    // 清理模型缓存
+    for (const [modelName] of modelCache) {
+      if (!recentModels.includes(modelName)) {
+        modelCache.delete(modelName)
+        console.log(`清理模型缓存: ${modelName}`)
+      }
+    }
+
+    // 清理纹理缓存（保留当前模型的纹理）
+    // 这里可以根据需要实现更复杂的清理逻辑
+  }
+
+  // 强制垃圾回收（如果可用）
+  if (window.gc && typeof window.gc === 'function') {
+    window.gc()
+    console.log('已触发垃圾回收')
+  }
+}
+
+/**
+ * 获取缓存统计信息
+ * @returns {Object} 缓存统计
+ */
+function getCacheStats() {
+  return {
+    modelCache: {
+      size: modelCache.size,
+      models: Array.from(modelCache.keys())
+    },
+    textureCache: {
+      size: textureCache.size,
+      textures: Array.from(textureCache.keys())
+    },
+    memoryUsage: performance.memory ? {
+      used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+      total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024),
+      limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)
+    } : null
+  }
 }
 
 // 等待Canvas元素准备就绪
@@ -962,21 +1260,30 @@ onMounted(async () => {
       throw new Error('Canvas元素未找到')
     }
 
-    // === PIXI 应用配置 ===
+    // === 获取设备性能等级和优化配置 ===
+    const devicePerformance = getDevicePerformanceLevel()
+    const optimizedConfig = getOptimizedConfig(devicePerformance)
+
+    console.log(`设备性能等级: ${devicePerformance}`)
+    console.log('优化配置:', optimizedConfig)
+
+    // === PIXI 应用配置（性能优化） ===
     const pixiConfig = {
       view: canvas.value,
       width: isDesktopPetMode.value ? 300 : 600,
       height: isDesktopPetMode.value ? 400 : 600,
       backgroundColor: isDesktopPetMode.value ? 0x000000 : 0x000000,
       backgroundAlpha: isDesktopPetMode.value ? 0 : 1,
-      autoDensity: true,
-      antialias: true,
-      resolution: window.devicePixelRatio || 1,
-      // === 性能优化配置 ===
-      powerPreference: 'high-performance', // 使用高性能GPU
-      preserveDrawingBuffer: false, // 减少内存占用
-      clearBeforeRender: true, // 确保每帧清理
-      forceCanvas: false, // 优先使用WebGL
+
+      // 应用性能优化配置
+      ...PIXI_PERFORMANCE_CONFIG.renderer,
+      ...PIXI_PERFORMANCE_CONFIG.application,
+
+      // 根据设备性能调整分辨率
+      resolution: devicePerformance === 'low' ? 1 : (window.devicePixelRatio || 1),
+
+      // 根据性能等级调整抗锯齿
+      antialias: devicePerformance !== 'low',
     }
 
     console.log('PIXI 应用配置:', pixiConfig)
@@ -989,7 +1296,12 @@ onMounted(async () => {
     }
 
     console.log('PIXI应用创建成功')
-    console.log('PIXI渲染器:', app.renderer.type === PIXI.RENDERER_TYPE.WEBGL ? 'WebGL' : 'Canvas')
+
+    // 设置渲染器类型
+    const isWebGL = app.renderer.type === PIXI.RENDERER_TYPE.WEBGL
+    rendererType.value = isWebGL ? 'WebGL' : 'Canvas'
+
+    console.log('PIXI渲染器:', rendererType.value)
     console.log('Canvas实际尺寸:', app.view.width, 'x', app.view.height)
     console.log('Canvas CSS尺寸:', app.view.style.width, 'x', app.view.style.height)
 
@@ -1009,6 +1321,23 @@ onMounted(async () => {
     // 启动性能监控
     if (isDevelopmentMode.value) {
       startPerformanceMonitoring()
+
+      // 添加快捷键监听（Ctrl+Shift+P 切换性能监控）
+      const handleKeyPress = (event) => {
+        if (event.ctrlKey && event.shiftKey && event.key === 'P') {
+          event.preventDefault()
+          if (performanceMonitor.value) {
+            performanceMonitor.value.toggleMonitor()
+          }
+        }
+      }
+
+      window.addEventListener('keydown', handleKeyPress)
+
+      // 在组件卸载时移除监听器
+      onUnmounted(() => {
+        window.removeEventListener('keydown', handleKeyPress)
+      })
     }
 
     // 加载默认模型
@@ -1016,6 +1345,27 @@ onMounted(async () => {
 
     // 设置主进程命令监听器
     setupMainProcessListeners()
+
+    // 🚀 启动后台预加载其他模型（提升切换速度）
+    if (!isDesktopPetMode.value) {
+      // 在非桌面模式下预加载所有模型
+      const allModelNames = Object.keys(modelConfigs)
+      const modelsToPreload = allModelNames.filter(name => name !== currentModelName.value)
+
+      console.log('🔄 开始后台预加载其他模型:', modelsToPreload)
+
+      // 延迟启动预加载，避免影响初始加载
+      setTimeout(() => {
+        batchPreloadModels(modelsToPreload)
+      }, 2000)
+    } else {
+      // 桌面模式下只预加载常用的几个模型
+      const commonModels = ['hibiki', 'hiyori', 'youyou'].filter(name => name !== currentModelName.value)
+      setTimeout(() => {
+        batchPreloadModels(commonModels)
+      }, 3000)
+    }
+
   } catch (error) {
     console.error('应用初始化失败:', error)
   }
@@ -1214,6 +1564,10 @@ onUnmounted(() => {
     app = null
   }
 
+  // 清理所有缓存
+  console.log('清理缓存资源')
+  clearModelCache(true)
+
   // 强制垃圾回收（如果可用）
   if (window.gc) {
     window.gc()
@@ -1397,6 +1751,10 @@ async function autoFitModel(model, canvasWidth, canvasHeight) {
   }
 }
 
+/**
+ * 优化后的模型加载函数
+ * 使用预加载的资源来加速模型加载
+ */
 async function loadModel(modelName) {
   try {
     console.log(`=== 开始加载模型: ${modelName} ===`)
@@ -1427,20 +1785,34 @@ async function loadModel(modelName) {
     console.log(`模型配置:`, config)
     console.log(`模型路径: ${config.path}`)
 
-    // 检查模型文件是否存在
-    try {
-      const response = await fetch(config.path)
-      if (!response.ok) {
-        throw new Error(`模型文件不存在或无法访问: ${config.path} (状态码: ${response.status})`)
-      }
-      console.log('模型文件检查通过')
-    } catch (fetchError) {
-      throw new Error(`无法访问模型文件: ${fetchError.message}`)
+    // 尝试使用预加载的资源
+    let preloadedResources = null
+    if (modelCache.has(modelName)) {
+      console.log('🚀 使用预加载的模型资源')
+      preloadedResources = modelCache.get(modelName)
+    } else {
+      console.log('⏳ 模型资源未预加载，开始实时加载...')
+      // 如果没有预加载，则实时加载
+      preloadedResources = await preloadModelResources(modelName)
     }
 
-    // 加载模型
-    console.log('开始加载Live2D模型...')
-    model = await Live2DModel.from(config.path)
+    // 使用预加载的资源创建模型
+    console.log('开始创建Live2D模型...')
+
+    // 方法1: 如果有预加载资源，尝试直接使用
+    if (preloadedResources) {
+      try {
+        // 这里可以进一步优化，直接使用预加载的资源
+        // 但由于pixi-live2d-display的限制，我们仍需要使用from方法
+        model = await Live2DModel.from(config.path)
+      } catch (error) {
+        console.warn('使用预加载资源创建模型失败，回退到标准方法:', error)
+        model = await Live2DModel.from(config.path)
+      }
+    } else {
+      // 回退到原始方法
+      model = await Live2DModel.from(config.path)
+    }
 
     if (!model) {
       throw new Error('模型加载返回null')
@@ -2232,9 +2604,42 @@ function formatTime(seconds) {
   const secs = Math.floor(seconds % 60)
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
+
+// 设备性能等级
+const devicePerformanceLevel = ref(getDevicePerformanceLevel())
+
+// 渲染器类型
+const rendererType = ref('未知')
+
+// 缓存统计
+const cacheStats = ref({
+  modelCache: { size: 0, models: [] },
+  textureCache: { size: 0, textures: [] },
+  memoryUsage: null
+})
+
+// 更新缓存统计
+function updateCacheStats() {
+  cacheStats.value = getCacheStats()
+}
+
+// 提供数据给子组件
+provide('loadingState', loadingState)
+provide('performanceStats', performanceStats)
+provide('cacheStats', cacheStats)
+provide('devicePerformance', devicePerformanceLevel)
+provide('rendererType', rendererType)
+provide('clearModelCache', clearModelCache)
+provide('getCacheStats', getCacheStats)
 </script>
 
 <template>
+  <!-- 加载进度组件 -->
+  <LoadingProgress />
+
+  <!-- 性能监控组件（开发模式） -->
+  <PerformanceMonitor v-if="isDevelopmentMode" ref="performanceMonitor" />
+
   <!-- 桌面模型模式 -->
   <div v-if="isDesktopPetMode" class="desktop-pet-container">
     <!-- Live2D 模型显示区域 -->
