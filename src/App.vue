@@ -6,6 +6,9 @@ import DesktopPetControlsSimplified from './components/DesktopPetControlsSimplif
 import IconShowcase from './components/IconShowcase.vue'
 import LoadingProgress from './components/LoadingProgress.vue'
 import PerformanceMonitor from './components/PerformanceMonitor.vue'
+import StatusBar from './components/StatusBar.vue'
+import TopToolbar from './components/TopToolbar.vue'
+import RightPanel from './components/RightPanel.vue'
 import { initDesktopPetSimulator, shouldUseSimulator } from './utils/desktopPetSimulator.js'
 import {
   PIXI_PERFORMANCE_CONFIG,
@@ -31,6 +34,11 @@ const canvas = ref(null)
 const isModelLoaded = ref(false)
 const currentModelName = ref('idol')
 const performanceMonitor = ref(null)
+
+// 面板控制状态
+const showLeftPanel = ref(true)
+const showRightPanel = ref(true)
+const showPerformanceMonitor = ref(false)
 
 let app
 let model
@@ -2623,6 +2631,64 @@ function updateCacheStats() {
   cacheStats.value = getCacheStats()
 }
 
+// === 新增的工具栏事件处理方法 ===
+
+// 切换口型同步状态
+function toggleSpeaking() {
+  if (isSpeaking.value) {
+    stopSpeaking()
+  } else {
+    startSpeaking()
+  }
+}
+
+// 缩放控制
+function zoomIn() {
+  if (!model || !isModelLoaded.value) return
+  const newScale = Math.min(model.scale.x * 1.2, 3.0)
+  model.scale.set(newScale, newScale)
+}
+
+function zoomOut() {
+  if (!model || !isModelLoaded.value) return
+  const newScale = Math.max(model.scale.x * 0.8, 0.1)
+  model.scale.set(newScale, newScale)
+}
+
+function zoomReset() {
+  if (!model || !isModelLoaded.value) return
+  refitModel() // 重新调整到最佳大小
+}
+
+// 模型居中
+function centerModel() {
+  if (!model || !isModelLoaded.value || !app) return
+
+  const canvasSize = getCanvasLogicalSize()
+  model.position.set(canvasSize.width / 2, canvasSize.height / 2)
+}
+
+// 显示帮助信息
+function showHelp() {
+  alert(`Live2D Studio 帮助
+
+快捷键：
+- 空格键：播放随机动作
+- R键：播放随机表情
+- S键：开始/停止口型同步
+- F键：重新调整模型大小
+
+面板控制：
+- 左侧面板：模型控制和设置
+- 右侧面板：属性和状态信息
+- 顶部工具栏：快速操作按钮
+
+提示：
+- 可以通过工具栏按钮切换面板显示
+- 支持鼠标拖拽调整模型位置
+- 支持鼠标滚轮缩放模型`)
+}
+
 // 提供数据给子组件
 provide('loadingState', loadingState)
 provide('performanceStats', performanceStats)
@@ -2638,7 +2704,7 @@ provide('getCacheStats', getCacheStats)
   <LoadingProgress />
 
   <!-- 性能监控组件（开发模式） -->
-  <PerformanceMonitor v-if="isDevelopmentMode" ref="performanceMonitor" />
+  <PerformanceMonitor v-if="isDevelopmentMode && showPerformanceMonitor" ref="performanceMonitor" />
 
   <!-- 桌面模型模式 -->
   <div v-if="isDesktopPetMode" class="desktop-pet-container">
@@ -2667,115 +2733,70 @@ provide('getCacheStats', getCacheStats)
     />
   </div>
 
-  <!-- 传统 Web 模式 -->
-  <div v-else style="padding: 20px; font-family: Arial, sans-serif;">
-    <!-- 图标展示区域（开发模式） -->
-<!--    <div v-if="isDevelopmentMode" style="margin-bottom: 20px; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: #f0f8ff;">-->
-<!--      <IconShowcase />-->
-<!--    </div>-->
+  <!-- 全屏专业编辑软件模式 -->
+  <div v-else class="fullscreen-app">
+    <!-- 顶部工具栏 -->
+    <TopToolbar
+      :current-model-name="currentModelName"
+      :is-model-loaded="isModelLoaded"
+      :is-speaking="isSpeaking"
+      :model-configs="modelConfigs"
+      :show-left-panel="showLeftPanel"
+      :show-right-panel="showRightPanel"
+      :show-performance="showPerformanceMonitor"
+      @change-model="(value) => { currentModelName = value; changeModel(); }"
+      @random-motion="playRandomMotion"
+      @random-expression="playRandomExpression"
+      @toggle-speaking="toggleSpeaking"
+      @refit-model="refitModel"
+      @zoom-in="zoomIn"
+      @zoom-out="zoomOut"
+      @zoom-reset="zoomReset"
+      @toggle-left-panel="showLeftPanel = !showLeftPanel"
+      @toggle-right-panel="showRightPanel = !showRightPanel"
+      @toggle-performance="showPerformanceMonitor = !showPerformanceMonitor"
+      @show-help="showHelp"
+    />
 
-    <!-- 模型选择区域 -->
-    <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
-      <h3 style="margin: 0 0 10px 0; color: #333;">模型选择</h3>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="modelSelect" style="font-weight: bold;">选择模型:</label>
-        <select
-          id="modelSelect"
-          v-model="currentModelName"
-          @change="changeModel"
-          style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px;"
-        >
-          <option value="idol">{{ modelConfigs.idol.name }}</option>
-          <option value="lanhei">{{ modelConfigs.lanhei.name }}</option>
-          <option value="hibiki">{{ modelConfigs.hibiki.name }}</option>
-          <option value="hiyori">{{ modelConfigs.hiyori.name }}</option>
-          <option value="mark">{{ modelConfigs.mark.name }}</option>
-          <option value="natori">{{ modelConfigs.natori.name }}</option>
-          <option value="kei_basic">{{ modelConfigs.kei_basic.name }}</option>
-          <option value="kei_vowels">{{ modelConfigs.kei_vowels.name }}</option>
-          <option value="youyou">{{ modelConfigs.youyou.name }}</option>
-        </select>
-        <span v-if="!isModelLoaded" style="color: #666; font-size: 14px;">加载中...</span>
-        <span v-else style="color: #28a745; font-size: 14px;">✓ 已加载</span>
-      </div>
-    </div>
-
-    <!-- Live2D 画布 -->
-    <div style="text-align: center; margin-bottom: 20px;">
-      <canvas
-        ref="canvas"
-        :width="600"
-        :height="600"
-        style="
-          width: 600px;
-          height: 600px;
-          border: 2px solid #333;
-          border-radius: 8px;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-          display: block;
-          margin: 0 auto;
-        "
-      ></canvas>
-    </div>
-    
-    
-
-    <!-- 控制面板 -->
-    <div class="control-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-      <!-- 动作控制 -->
-      <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
-        <h4 style="margin: 0 0 15px 0; color: #333;">动作控制</h4>
-
-        <div style="margin-bottom: 10px;">
-          <label for="motionSelect" style="display: block; margin-bottom: 5px; font-weight: bold;">选择动作:</label>
-          <select
-            id="motionSelect"
-            v-model="selectedMotion"
-            :disabled="!isModelLoaded"
-            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-          >
-            <option value="">-- 请选择动作 --</option>
-            <option
-              v-for="motion in currentConfig.motions"
-              :key="motion.file"
-              :value="motion.file"
+    <!-- 主工作区 -->
+    <div class="main-workspace">
+      <!-- 左侧控制面板 -->
+      <div v-if="showLeftPanel" class="left-control-panel">
+        <!-- 模型选择区域 -->
+        <div class="control-section">
+          <h3 class="section-title">模型选择</h3>
+          <div class="model-select-container">
+            <select
+              id="modelSelect"
+              v-model="currentModelName"
+              @change="changeModel"
+              class="model-select"
             >
-              {{ motion.name }}
-            </option>
-          </select>
+              <option value="idol">{{ modelConfigs.idol.name }}</option>
+              <option value="lanhei">{{ modelConfigs.lanhei.name }}</option>
+              <option value="hibiki">{{ modelConfigs.hibiki.name }}</option>
+              <option value="hiyori">{{ modelConfigs.hiyori.name }}</option>
+              <option value="mark">{{ modelConfigs.mark.name }}</option>
+              <option value="natori">{{ modelConfigs.natori.name }}</option>
+              <option value="kei_basic">{{ modelConfigs.kei_basic.name }}</option>
+              <option value="kei_vowels">{{ modelConfigs.kei_vowels.name }}</option>
+              <option value="youyou">{{ modelConfigs.youyou.name }}</option>
+            </select>
+            <div class="model-status">
+              <span v-if="!isModelLoaded" class="status-loading">加载中...</span>
+              <span v-else class="status-loaded">✓ 已加载</span>
+            </div>
+          </div>
         </div>
-
-        <div style="display: flex; gap: 10px;">
-          <button
-            @click="playMotion"
-            :disabled="!isModelLoaded || !selectedMotion"
-            style="flex: 1; padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;"
-            :style="{ opacity: (!isModelLoaded || !selectedMotion) ? 0.5 : 1 }"
-          >
-            播放动作
-          </button>
-          <button
-            @click="playRandomMotion"
-            :disabled="!isModelLoaded"
-            style="flex: 1; padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;"
-            :style="{ opacity: !isModelLoaded ? 0.5 : 1 }"
-          >
-            随机动作
-          </button>
-        </div>
-      </div>
-
-      <!-- 表情控制 -->
-      <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
-        <h4 style="margin: 0 0 15px 0; color: #333;">表情控制</h4>
-
-        <div style="margin-bottom: 10px;">
-          <label for="expressionSelect" style="display: block; margin-bottom: 5px; font-weight: bold;">选择表情:</label>
+      <!-- 表情控制区域 -->
+      <div class="control-section">
+        <h3 class="section-title">表情控制</h3>
+        <div class="control-group">
           <select
             id="expressionSelect"
             v-model="selectedExpression"
             :disabled="!isModelLoaded"
-            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+            class="control-select"
           >
             <option value="">-- 请选择表情 --</option>
             <option
@@ -2787,46 +2808,83 @@ provide('getCacheStats', getCacheStats)
             </option>
           </select>
         </div>
-
-        <div style="display: flex; gap: 10px;">
+        <div class="button-group">
           <button
             @click="playExpression"
             :disabled="!isModelLoaded || !selectedExpression"
-            style="flex: 1; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;"
-            :style="{ opacity: (!isModelLoaded || !selectedExpression) ? 0.5 : 1 }"
+            class="control-btn primary"
+            :class="{ disabled: !isModelLoaded || !selectedExpression }"
           >
             播放表情
           </button>
           <button
             @click="playRandomExpression"
             :disabled="!isModelLoaded"
-            style="flex: 1; padding: 8px 16px; background-color: #ffc107; color: #212529; border: none; border-radius: 4px; cursor: pointer;"
-            :style="{ opacity: !isModelLoaded ? 0.5 : 1 }"
+            class="control-btn secondary"
+            :class="{ disabled: !isModelLoaded }"
           >
             随机表情
           </button>
           <button
             @click="resetExpression"
             :disabled="!isModelLoaded"
-            style="flex: 1; padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;"
-            :style="{ opacity: !isModelLoaded ? 0.5 : 1 }"
+            class="control-btn tertiary"
+            :class="{ disabled: !isModelLoaded }"
           >
             重置表情
           </button>
         </div>
       </div>
 
-      <!-- 音频控制 -->
-      <div v-if="hasAudioSupport" style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
-        <h4 style="margin: 0 0 15px 0; color: #333;">音频控制</h4>
+      <!-- 动作控制区域 -->
+      <div class="control-section">
+        <h3 class="section-title">动作控制</h3>
+        <div class="control-group">
+          <select
+            id="motionSelect"
+            v-model="selectedMotion"
+            :disabled="!isModelLoaded"
+            class="control-select"
+          >
+            <option value="">-- 请选择动作 --</option>
+            <option
+              v-for="motion in currentConfig.motions"
+              :key="motion.file"
+              :value="motion.file"
+            >
+              {{ motion.name }}
+            </option>
+          </select>
+        </div>
+        <div class="button-group">
+          <button
+            @click="playMotion"
+            :disabled="!isModelLoaded || !selectedMotion"
+            class="control-btn primary"
+            :class="{ disabled: !isModelLoaded || !selectedMotion }"
+          >
+            播放动作
+          </button>
+          <button
+            @click="playRandomMotion"
+            :disabled="!isModelLoaded"
+            class="control-btn secondary"
+            :class="{ disabled: !isModelLoaded }"
+          >
+            随机动作
+          </button>
+        </div>
+      </div>
 
-        <div style="margin-bottom: 15px;">
-          <label for="soundSelect" style="display: block; margin-bottom: 5px; font-weight: bold;">选择音频:</label>
+      <!-- 音频控制区域 -->
+      <div v-if="hasAudioSupport" class="control-section">
+        <h3 class="section-title">音频控制</h3>
+        <div class="control-group">
           <select
             id="soundSelect"
             v-model="selectedSound"
             :disabled="!isModelLoaded"
-            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+            class="control-select"
           >
             <option value="">-- 请选择音频 --</option>
             <option
@@ -2840,38 +2898,36 @@ provide('getCacheStats', getCacheStats)
         </div>
 
         <!-- 播放控制按钮 -->
-        <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <div class="button-group">
           <button
             @click="playSelectedAudio"
             :disabled="!isModelLoaded || !selectedSound"
-            style="flex: 1; padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-            :style="{ opacity: (!isModelLoaded || !selectedSound) ? 0.5 : 1 }"
+            class="control-btn primary"
+            :class="{ disabled: !isModelLoaded || !selectedSound }"
           >
             ▶️ 播放
           </button>
           <button
             @click="isPaused ? resumeAudio() : pauseAudio()"
             :disabled="!isModelLoaded || !currentAudio"
-            style="flex: 1; padding: 6px 12px; background-color: #ffc107; color: #212529; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-            :style="{ opacity: (!isModelLoaded || !currentAudio) ? 0.5 : 1 }"
+            class="control-btn secondary"
+            :class="{ disabled: !isModelLoaded || !currentAudio }"
           >
             {{ isPaused ? '▶️ 继续' : '⏸️ 暂停' }}
           </button>
           <button
             @click="stopAudio"
             :disabled="!isModelLoaded || !currentAudio"
-            style="flex: 1; padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-            :style="{ opacity: (!isModelLoaded || !currentAudio) ? 0.5 : 1 }"
+            class="control-btn tertiary"
+            :class="{ disabled: !isModelLoaded || !currentAudio }"
           >
             ⏹️ 停止
           </button>
         </div>
 
         <!-- 音量控制 -->
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px;">
-            音量: {{ Math.round(audioVolume * 100) }}%
-          </label>
+        <div class="control-group">
+          <div class="slider-label">音量: {{ Math.round(audioVolume * 100) }}%</div>
           <input
             type="range"
             min="0"
@@ -2879,225 +2935,547 @@ provide('getCacheStats', getCacheStats)
             step="0.1"
             v-model="audioVolume"
             @input="setVolume(audioVolume)"
-            style="width: 100%;"
+            class="control-slider"
           />
         </div>
 
         <!-- 播放进度 -->
-        <div v-if="currentAudio" style="margin-bottom: 10px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px;">
+        <div v-if="currentAudio" class="control-group">
+          <div class="slider-label">
             进度: {{ formatTime(audioCurrentTime) }} / {{ formatTime(audioDuration) }}
-          </label>
+          </div>
           <input
             type="range"
             min="0"
             max="100"
             v-model="audioProgress"
             @input="seekAudio(audioProgress)"
-            style="width: 100%;"
+            class="control-slider"
           />
         </div>
 
         <!-- 播放状态 -->
-        <div style="text-align: center; font-size: 12px; color: #666;">
-          <span v-if="isPlaying" style="color: #28a745;">🎵 正在播放</span>
-          <span v-else-if="isPaused" style="color: #ffc107;">⏸️ 已暂停</span>
-          <span v-else style="color: #6c757d;">⏹️ 已停止</span>
+        <div class="audio-status">
+          <span v-if="isPlaying" class="status-playing">🎵 正在播放</span>
+          <span v-else-if="isPaused" class="status-paused">⏸️ 已暂停</span>
+          <span v-else class="status-stopped">⏹️ 已停止</span>
         </div>
       </div>
 
       <!-- 无音频支持时的占位 -->
-      <div v-else style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f8f9fa; opacity: 0.6;">
-        <h4 style="margin: 0 0 15px 0; color: #6c757d;">音频控制</h4>
-        <p style="margin: 0; color: #6c757d; font-size: 14px; text-align: center;">
-          当前模型不支持音频功能
-        </p>
+      <div v-else class="control-section disabled">
+        <h3 class="section-title">音频控制</h3>
+        <p class="no-audio-message">当前模型不支持音频功能</p>
       </div>
 
-      <!--
-        口型同步控制面板
-
-        功能说明:
-        - 提供口型同步功能的用户界面
-        - 支持开始/停止口型同步
-        - 提供敏感度调节功能
-        - 显示实时状态信息
-
-        设计特点:
-        - 独立的功能区域，与其他控制分离
-        - 清晰的视觉层次和状态反馈
-        - 响应式的按钮状态管理
-        - 用户友好的参数调节界面
-      -->
-      <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f0f8ff; margin-top: 15px;">
-        <h4 style="margin: 0 0 15px 0; color: #333;">🗣️ 口型同步测试</h4>
+      <!-- 口型同步控制区域 -->
+      <div class="control-section lipsync-section">
+        <h3 class="section-title">🗣️ 口型同步测试</h3>
 
         <!-- 音频文件信息显示 -->
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">测试音频:</label>
-          <!-- 动态显示音频文件状态，帮助用户了解当前可用的音频资源 -->
-          <span style="color: #666; font-size: 14px;">{{ audioFile ? 'test.wav (内置测试音频)' : '未加载音频文件' }}</span>
+        <div class="control-group">
+          <div class="audio-file-info">
+            测试音频: {{ audioFile ? 'test.wav (内置测试音频)' : '未加载音频文件' }}
+          </div>
         </div>
 
-        <!--
-          口型同步控制按钮组
-
-          设计原则:
-          - 双按钮设计：开始/停止，状态互斥
-          - 智能禁用：根据系统状态自动启用/禁用
-          - 视觉反馈：通过透明度和文字变化提供状态反馈
-          - 防误操作：严格的状态检查防止重复操作
-        -->
-        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-          <!--
-            开始说话按钮
-
-            启用条件 (所有条件必须同时满足):
-            - model: Live2D模型已加载
-            - isModelLoaded: 模型加载完成标志
-            - !isSpeaking: 当前未在进行口型同步
-            - audioFile: 音频文件已正确加载
-
-            状态变化:
-            - 待机时: "🎤 开始说话" (绿色，可点击)
-            - 运行时: "正在说话..." (灰色，禁用)
-            - 异常时: 禁用状态 (半透明)
-          -->
+        <!-- 口型同步控制按钮组 -->
+        <div class="button-group">
           <button
             @click="startSpeaking"
             :disabled="!model || !isModelLoaded || isSpeaking || !audioFile"
-            style="flex: 1; padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;"
-            :style="{ opacity: (!model || !isModelLoaded || isSpeaking || !audioFile) ? 0.5 : 1 }"
+            class="control-btn primary"
+            :class="{ disabled: !model || !isModelLoaded || isSpeaking || !audioFile }"
           >
             {{ isSpeaking ? '正在说话...' : '🎤 开始说话' }}
           </button>
-
-          <!--
-            停止说话按钮
-
-            启用条件:
-            - isSpeaking: 当前正在进行口型同步
-
-            功能:
-            - 立即停止音频播放
-            - 取消动画循环
-            - 重置所有嘴部参数
-            - 更新UI状态
-
-            状态变化:
-            - 运行时: "🛑 停止说话" (红色，可点击)
-            - 待机时: 禁用状态 (半透明)
-          -->
           <button
             @click="stopSpeaking"
             :disabled="!isSpeaking"
-            style="flex: 1; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;"
-            :style="{ opacity: !isSpeaking ? 0.5 : 1 }"
+            class="control-btn danger"
+            :class="{ disabled: !isSpeaking }"
           >
             🛑 停止说话
           </button>
         </div>
 
-        <!--
-          口型敏感度调节控制
-
-          功能说明:
-          - 允许用户实时调节口型同步的敏感度
-          - 范围: 10-100，步长: 5
-          - 实时生效，无需重启口型同步
-
-          敏感度效果:
-          - 10 (低敏感度): 需要很大音量才能张嘴，适合嘈杂环境或响亮音频
-          - 50 (中等敏感度): 平衡的响应，适合一般语音和音乐
-          - 100 (高敏感度): 轻微声音就有反应，适合安静环境或轻柔音频
-
-          技术实现:
-          - 双向绑定到 lipSyncSensitivity 响应式变量
-          - 在音频分析中作为除数使用: mouthOpen = volume / sensitivity
-          - 实时更新，立即影响口型计算
-        -->
-        <div style="margin-bottom: 10px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">
-            口型敏感度: {{ lipSyncSensitivity }}
-          </label>
+        <!-- 口型敏感度调节控制 -->
+        <div class="control-group">
+          <div class="slider-label">口型敏感度: {{ lipSyncSensitivity }}</div>
           <input
             type="range"
             min="10"
             max="100"
             step="5"
             v-model="lipSyncSensitivity"
-            style="width: 100%;"
+            class="control-slider"
           >
-          <!-- 敏感度范围提示，帮助用户理解调节方向 -->
-          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 2px;">
+          <div class="slider-labels">
             <span>低敏感度</span>
             <span>高敏感度</span>
           </div>
         </div>
 
-        <!--
-          口型同步状态指示器
-
-          功能说明:
-          - 实时显示当前口型同步的工作状态
-          - 提供清晰的视觉反馈
-          - 帮助用户了解系统当前状态
-
-          状态类型:
-          - 运行状态: "🎙️ 正在分析音频并同步口型" (绿色)
-            * 表示音频正在播放，嘴部动画正在运行
-            * 系统正在实时分析音频并更新Live2D参数
-
-          - 待机状态: "💤 口型同步待机中" (灰色)
-            * 表示系统空闲，等待用户启动口型同步
-            * 所有嘴部参数处于默认状态
-
-          设计特点:
-          - 使用表情符号增强视觉识别
-          - 颜色编码：绿色=活跃，灰色=待机
-          - 居中显示，突出状态信息
-        -->
-        <div style="text-align: center; font-size: 12px; color: #666;">
-          <span v-if="isSpeaking" style="color: #28a745;">🎙️ 正在分析音频并同步口型</span>
-          <span v-else style="color: #6c757d;">💤 口型同步待机中</span>
+        <!-- 口型同步状态指示器 -->
+        <div class="lipsync-status">
+          <span v-if="isSpeaking" class="status-speaking">🎙️ 正在分析音频并同步口型</span>
+          <span v-else class="status-idle">💤 口型同步待机中</span>
         </div>
       </div>
-    </div>
 
-    <!-- 额外控制按钮 -->
-    <div v-if="isModelLoaded" style="margin-top: 20px; text-align: center;">
-      <button
-        @click="refitModel"
-        style="padding: 8px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;"
-      >
-        🔄 重新调整模型大小
-      </button>
-      <span style="font-size: 12px; color: #666;">
-        如果模型显示异常，点击此按钮重新调整
-      </span>
-    </div>
-
-    <!-- 状态信息 -->
-    <div v-if="isModelLoaded" style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 14px;">
-        <div><strong>当前模型:</strong> {{ currentConfig.name }}</div>
-        <div><strong>动作数量:</strong> {{ currentConfig.motions.length }}</div>
-        <div><strong>表情数量:</strong> {{ currentConfig.expressions.length }}</div>
-        <div><strong>音频数量:</strong> {{ currentConfig.sounds.length }}</div>
-        <div><strong>Canvas尺寸:</strong> 640x480</div>
-        <div v-if="model"><strong>模型缩放:</strong> {{ model.scale.x.toFixed(4) }}</div>
-        <div v-if="model"><strong>模型位置:</strong> ({{ model.position.x.toFixed(0) }}, {{ model.position.y.toFixed(0) }})</div>
-        <div><strong>音频支持:</strong> {{ hasAudioSupport ? '✅ 是' : '❌ 否' }}</div>
+      <!-- 额外控制按钮 -->
+      <div v-if="isModelLoaded" class="control-section">
+        <div class="button-group">
+          <button @click="refitModel" class="control-btn info">
+            🔄 重新调整模型大小
+          </button>
+        </div>
+        <p class="help-text">如果模型显示异常，点击此按钮重新调整</p>
       </div>
     </div>
+
+      <!-- 中央工作区 -->
+      <div class="center-workspace">
+        <!-- Live2D 画布容器 -->
+        <div class="canvas-workspace">
+          <canvas
+            ref="canvas"
+            :width="600"
+            :height="600"
+            class="live2d-canvas-main"
+          ></canvas>
+        </div>
+      </div>
+
+      <!-- 右侧属性面板 -->
+      <RightPanel
+        :visible="showRightPanel"
+        :current-model-name="currentModelName"
+        :is-model-loaded="isModelLoaded"
+        :model-configs="modelConfigs"
+        :model-scale="model ? model.scale.x : 1.0"
+        :model-position="model ? { x: model.position.x, y: model.position.y } : { x: 0, y: 0 }"
+        :has-audio-support="hasAudioSupport"
+        :is-speaking="isSpeaking"
+        :is-playing="isPlaying"
+        :is-paused="isPaused"
+        :audio-volume="audioVolume"
+        :performance-stats="performanceStats"
+        :is-development-mode="isDevelopmentMode"
+        @toggle="showRightPanel = !showRightPanel"
+        @volume-change="setVolume"
+        @zoom-in="zoomIn"
+        @zoom-out="zoomOut"
+        @zoom-reset="zoomReset"
+        @center-model="centerModel"
+        @random-motion="playRandomMotion"
+        @random-expression="playRandomExpression"
+        @reset-expression="resetExpression"
+        @refit-model="refitModel"
+      />
+    </div>
+
+    <!-- 状态栏组件 -->
+  <StatusBar
+    :current-model-name="currentModelName"
+    :is-model-loaded="isModelLoaded"
+    :model-configs="modelConfigs"
+    :model-scale="model ? model.scale.x : 1.0"
+    :model-position="model ? { x: model.position.x, y: model.position.y } : { x: 0, y: 0 }"
+    :has-audio-support="hasAudioSupport"
+    :is-speaking="isSpeaking"
+    :performance-stats="performanceStats"
+    :is-development-mode="isDevelopmentMode"
+  />
   </div>
 </template>
 
 <style scoped>
-/* 按钮悬停效果 */
+/* === 全屏专业编辑软件布局样式 === */
+
+/* 全屏应用容器 */
+.fullscreen-app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1e1e1e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 主工作区 */
+.main-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 左侧控制面板 */
+.left-control-panel {
+  width: 320px;
+  min-width: 320px;
+  background: #2d2d2d;
+  border-right: 1px solid #404040;
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+/* 中央工作区 */
+.center-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #2a2a2a;
+}
+
+/* 画布工作区 */
+.canvas-workspace {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #3a3a3a 0%, #2a2a2a 70%);
+  position: relative;
+}
+
+/* 主画布样式 */
+.live2d-canvas-main {
+  width: 600px;
+  height: 600px;
+  border-radius: 8px;
+  display: block;
+  background: #000000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.live2d-canvas-main:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* === 控制面板组件样式 === */
+
+/* 控制区域 */
+.control-section {
+  background: #353535;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.control-section:hover {
+  background: #3a3a3a;
+  border-color: #4a4a4a;
+}
+
+.control-section.disabled {
+  opacity: 0.6;
+  background: #2a2a2a;
+}
+
+.control-section.lipsync-section {
+  background: #2a3a4a;
+  border-color: #3a4a5a;
+}
+
+/* 区域标题 */
+.section-title {
+  margin: 0 0 12px 0;
+  color: #e0e0e0;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #404040;
+  padding-bottom: 8px;
+}
+
+/* 控制组 */
+.control-group {
+  margin-bottom: 12px;
+}
+
+/* 控制标签 */
+.control-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #b0b0b0;
+  font-size: 14px;
+}
+
+/* 滑块标签 */
+.slider-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #a0a0a0;
+  font-size: 13px;
+}
+
+/* 模型选择容器 */
+.model-select-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 模型状态 */
+.model-status {
+  font-size: 14px;
+}
+
+.status-loading {
+  color: #f59e0b;
+}
+
+.status-loaded {
+  color: #22c55e;
+}
+
+/* 选择框样式 */
+.control-select, .model-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #555555;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #404040;
+  color: #e0e0e0;
+  transition: all 0.2s ease;
+}
+
+.control-select:focus, .model-select:focus {
+  outline: none;
+  border-color: #0078d4;
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3);
+}
+
+.control-select:disabled, .model-select:disabled {
+  background: #2a2a2a;
+  color: #666666;
+  opacity: 0.6;
+}
+
+/* 滑块样式 */
+.control-slider {
+  width: 100%;
+  height: 6px;
+  background: #404040;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.control-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #0078d4;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.control-slider::-webkit-slider-thumb:hover {
+  background: #106ebe;
+}
+
+.control-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #0078d4;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* 滑块标签 */
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #a0a0a0;
+  margin-top: 4px;
+}
+
+/* 按钮组 */
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 控制按钮样式 */
+.control-btn {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px 12px;
+  border: 1px solid #555555;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  background: #404040;
+  color: #e0e0e0;
+}
+
+.control-btn:hover:not(.disabled) {
+  background: #4a4a4a;
+  border-color: #666666;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+  background: #2a2a2a !important;
+  border-color: #333333 !important;
+}
+
+/* 按钮颜色变体 */
+.control-btn.primary {
+  background: #0078d4;
+  border-color: #106ebe;
+  color: white;
+}
+
+.control-btn.primary:hover:not(.disabled) {
+  background: #106ebe;
+  border-color: #005a9e;
+}
+
+.control-btn.secondary {
+  background: #22c55e;
+  border-color: #16a34a;
+  color: white;
+}
+
+.control-btn.secondary:hover:not(.disabled) {
+  background: #16a34a;
+  border-color: #15803d;
+}
+
+.control-btn.tertiary {
+  background: #6b7280;
+  border-color: #4b5563;
+  color: white;
+}
+
+.control-btn.tertiary:hover:not(.disabled) {
+  background: #4b5563;
+  border-color: #374151;
+}
+
+.control-btn.danger {
+  background: #ef4444;
+  border-color: #dc2626;
+  color: white;
+}
+
+.control-btn.danger:hover:not(.disabled) {
+  background: #dc2626;
+  border-color: #b91c1c;
+}
+
+.control-btn.info {
+  background: #06b6d4;
+  border-color: #0891b2;
+  color: white;
+}
+
+.control-btn.info:hover:not(.disabled) {
+  background: #0891b2;
+  border-color: #0e7490;
+}
+
+/* 音频状态样式 */
+.audio-status {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.status-playing {
+  color: #22c55e;
+}
+
+.status-paused {
+  color: #f59e0b;
+}
+
+.status-stopped {
+  color: #9ca3af;
+}
+
+/* 口型同步状态 */
+.lipsync-status {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.status-speaking {
+  color: #22c55e;
+}
+
+.status-idle {
+  color: #9ca3af;
+}
+
+/* 音频文件信息 */
+.audio-file-info {
+  color: #a0a0a0;
+  font-size: 14px;
+}
+
+/* 无音频消息 */
+.no-audio-message {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* 帮助文本 */
+.help-text {
+  font-size: 12px;
+  color: #a0a0a0;
+  margin: 8px 0 0 0;
+  text-align: center;
+}
+
+/* 滚动条样式 */
+.left-control-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.left-control-panel::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.left-control-panel::-webkit-scrollbar-thumb {
+  background: #555555;
+  border-radius: 4px;
+}
+
+.left-control-panel::-webkit-scrollbar-thumb:hover {
+  background: #666666;
+}
+
+/* 通用按钮悬停效果 */
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   transition: all 0.2s ease;
 }
 
@@ -3105,23 +3483,112 @@ button:active:not(:disabled) {
   transform: translateY(0);
 }
 
-/* 选择框样式 */
+/* 选择框焦点样式 */
 select:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  border-color: #0078d4;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.3);
 }
 
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .control-grid {
-    grid-template-columns: 1fr 1fr !important;
+/* === 响应式设计 === */
+
+/* 大屏幕优化 */
+@media (min-width: 1920px) {
+  .left-control-panel {
+    width: 380px;
+    min-width: 380px;
+  }
+
+  .live2d-canvas-main {
+    width: 800px;
+    height: 800px;
   }
 }
 
+/* 平板设备 */
+@media (max-width: 1024px) {
+  .left-control-panel {
+    width: 280px;
+    min-width: 280px;
+  }
+
+  .live2d-canvas-main {
+    width: 500px;
+    height: 500px;
+  }
+
+  .control-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 14px;
+  }
+}
+
+/* 手机设备 */
 @media (max-width: 768px) {
-  .control-grid {
-    grid-template-columns: 1fr !important;
+  .main-workspace {
+    flex-direction: column;
+  }
+
+  .left-control-panel {
+    width: 100%;
+    min-width: auto;
+    height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid #404040;
+  }
+
+  .live2d-canvas-main {
+    width: 400px;
+    height: 400px;
+  }
+
+  .control-section {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .section-title {
+    font-size: 13px;
+  }
+
+  .control-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .button-group {
+    gap: 6px;
+  }
+}
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+  .left-control-panel {
+    height: 35vh;
+  }
+
+  .live2d-canvas-main {
+    width: 300px;
+    height: 300px;
+  }
+
+  .control-section {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  .control-btn {
+    font-size: 11px;
+    padding: 5px 8px;
+    min-width: 60px;
+  }
+
+  .button-group {
+    gap: 4px;
   }
 }
 
