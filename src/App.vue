@@ -4,6 +4,7 @@ import { Live2DModel, SoundManager, MotionPriority } from 'pixi-live2d-display'
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import DesktopPetControlsSimplified from './components/DesktopPetControlsSimplified.vue'
 import IconShowcase from './components/IconShowcase.vue'
+import Live2D3DController from './components/Live2D3DController.vue'
 import { initDesktopPetSimulator, shouldUseSimulator } from './utils/desktopPetSimulator.js'
 
 window.PIXI = PIXI
@@ -26,6 +27,21 @@ const currentModelName = ref('idol')
 let app
 let model
 let audioContext
+let animationFrameId = null
+
+// 3D 效果配置
+const threeDConfig = ref({
+  enabled: false,
+  mode: 'css', // 'css', 'pixi3d', 'threejs'
+  rotationX: 0,
+  rotationY: 0,
+  rotationZ: 0,
+  perspective: 1000,
+  translateZ: 0,
+  scale3D: 1,
+  autoRotate: false,
+  autoRotateSpeed: 1
+})
 
 // 模型配置
 const modelConfigs = {
@@ -852,6 +868,189 @@ async function waitForCanvasReady() {
   return false
 }
 
+// ==================== 3D 效果功能 ====================
+
+/**
+ * 应用 CSS 3D 变换到 Canvas
+ */
+function applyCSS3DTransform() {
+  if (!canvas.value || !threeDConfig.value.enabled || threeDConfig.value.mode !== 'css') return
+
+  const { rotationX, rotationY, rotationZ, perspective, translateZ, scale3D } = threeDConfig.value
+
+  const transform = `
+    perspective(${perspective}px)
+    rotateX(${rotationX}deg)
+    rotateY(${rotationY}deg)
+    rotateZ(${rotationZ}deg)
+    translateZ(${translateZ}px)
+    scale3d(${scale3D}, ${scale3D}, ${scale3D})
+  `.replace(/\s+/g, ' ').trim()
+
+  canvas.value.style.transform = transform
+  canvas.value.style.transformStyle = 'preserve-3d'
+
+  console.log('应用 CSS 3D 变换:', transform)
+}
+
+/**
+ * 启动自动旋转动画
+ */
+function startAutoRotation() {
+  if (!threeDConfig.value.autoRotate) return
+
+  const animate = () => {
+    if (threeDConfig.value.autoRotate && threeDConfig.value.enabled) {
+      threeDConfig.value.rotationY += threeDConfig.value.autoRotateSpeed
+      if (threeDConfig.value.rotationY >= 360) {
+        threeDConfig.value.rotationY = 0
+      }
+      applyCSS3DTransform()
+      animationFrameId = requestAnimationFrame(animate)
+    }
+  }
+
+  animationFrameId = requestAnimationFrame(animate)
+}
+
+/**
+ * 停止自动旋转动画
+ */
+function stopAutoRotation() {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
+  }
+}
+
+/**
+ * 切换 3D 效果
+ */
+function toggle3DEffect() {
+  threeDConfig.value.enabled = !threeDConfig.value.enabled
+
+  if (threeDConfig.value.enabled) {
+    applyCSS3DTransform()
+    if (threeDConfig.value.autoRotate) {
+      startAutoRotation()
+    }
+    console.log('3D 效果已启用')
+  } else {
+    stopAutoRotation()
+    if (canvas.value) {
+      canvas.value.style.transform = ''
+      canvas.value.style.transformStyle = ''
+    }
+    console.log('3D 效果已禁用')
+  }
+}
+
+/**
+ * 设置 3D 旋转
+ */
+function set3DRotation(x, y, z) {
+  threeDConfig.value.rotationX = x || 0
+  threeDConfig.value.rotationY = y || 0
+  threeDConfig.value.rotationZ = z || 0
+  applyCSS3DTransform()
+}
+
+/**
+ * 重置 3D 效果
+ */
+function reset3DEffect() {
+  threeDConfig.value.rotationX = 0
+  threeDConfig.value.rotationY = 0
+  threeDConfig.value.rotationZ = 0
+  threeDConfig.value.translateZ = 0
+  threeDConfig.value.scale3D = 1
+  applyCSS3DTransform()
+}
+
+/**
+ * 更新 3D 配置
+ */
+function updateThreeDConfig(updates) {
+  Object.assign(threeDConfig.value, updates)
+
+  // 如果更新了自动旋转设置，需要重新启动或停止动画
+  if ('autoRotate' in updates) {
+    if (updates.autoRotate) {
+      startAutoRotation()
+    } else {
+      stopAutoRotation()
+    }
+  }
+}
+
+/**
+ * 设置 3D 鼠标交互
+ */
+function setup3DMouseInteraction() {
+  if (!canvas.value) return
+
+  let isMouseDown = false
+  let lastMouseX = 0
+  let lastMouseY = 0
+
+  // 鼠标按下
+  canvas.value.addEventListener('mousedown', (e) => {
+    if (!threeDConfig.value.enabled) return
+    isMouseDown = true
+    lastMouseX = e.clientX
+    lastMouseY = e.clientY
+    canvas.value.style.cursor = 'grabbing'
+  })
+
+  // 鼠标移动
+  canvas.value.addEventListener('mousemove', (e) => {
+    if (!threeDConfig.value.enabled || !isMouseDown) return
+
+    const deltaX = e.clientX - lastMouseX
+    const deltaY = e.clientY - lastMouseY
+
+    // 根据鼠标移动调整旋转
+    threeDConfig.value.rotationY += deltaX * 0.5
+    threeDConfig.value.rotationX -= deltaY * 0.5
+
+    // 限制旋转角度
+    threeDConfig.value.rotationX = Math.max(-90, Math.min(90, threeDConfig.value.rotationX))
+
+    applyCSS3DTransform()
+
+    lastMouseX = e.clientX
+    lastMouseY = e.clientY
+  })
+
+  // 鼠标释放
+  canvas.value.addEventListener('mouseup', () => {
+    isMouseDown = false
+    canvas.value.style.cursor = threeDConfig.value.enabled ? 'grab' : 'default'
+  })
+
+  // 鼠标离开
+  canvas.value.addEventListener('mouseleave', () => {
+    isMouseDown = false
+    canvas.value.style.cursor = 'default'
+  })
+
+  // 鼠标滚轮缩放
+  canvas.value.addEventListener('wheel', (e) => {
+    if (!threeDConfig.value.enabled) return
+    e.preventDefault()
+
+    const delta = e.deltaY > 0 ? -0.1 : 0.1
+    threeDConfig.value.scale3D = Math.max(0.5, Math.min(3, threeDConfig.value.scale3D + delta))
+
+    applyCSS3DTransform()
+  })
+
+  // 设置初始鼠标样式
+  if (threeDConfig.value.enabled) {
+    canvas.value.style.cursor = 'grab'
+  }
+}
+
 // 检查Live2D核心库是否正确加载
 function checkLive2DLibraries() {
   console.log('=== 检查Live2D库 ===')
@@ -1002,6 +1201,9 @@ onMounted(async () => {
         model.update(app.ticker.deltaMS)
       }
     })
+
+    // 添加 3D 效果鼠标交互
+    setup3DMouseInteraction()
 
     // 添加窗口大小变化监听器
     window.addEventListener('resize', handleResize)
@@ -2295,6 +2497,17 @@ function formatTime(seconds) {
       </div>
     </div>
 
+    <!-- 3D 效果控制区域 -->
+    <div style="margin-bottom: 20px;">
+      <Live2D3DController
+        :config="threeDConfig"
+        @toggle3D="toggle3DEffect"
+        @reset3D="reset3DEffect"
+        @updateConfig="updateThreeDConfig"
+        @applyTransform="applyCSS3DTransform"
+      />
+    </div>
+
     <!-- Live2D 画布 -->
     <div style="text-align: center; margin-bottom: 20px;">
       <canvas
@@ -2918,6 +3131,78 @@ select:focus {
   font-size: 11px;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+/* 3D 效果相关样式 */
+.live2d-canvas {
+  transition: transform 0.3s ease;
+}
+
+.live2d-canvas.three-d-enabled {
+  cursor: grab;
+}
+
+.live2d-canvas.three-d-enabled:active {
+  cursor: grabbing;
+}
+
+/* 3D 控制面板样式 */
+.three-d-controls {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  padding: 15px;
+  color: white;
+}
+
+.three-d-controls h4 {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.three-d-controls input[type="range"] {
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  height: 6px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.three-d-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.three-d-controls input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.three-d-controls label {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  font-weight: 500;
+}
+
+/* 3D 效果提示框 */
+.three-d-tip {
+  background: linear-gradient(45deg, #e7f3ff, #cce7ff);
+  border-left: 4px solid #007bff;
+  animation: tipGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes tipGlow {
+  from { box-shadow: 0 0 5px rgba(0,123,255,0.3); }
+  to { box-shadow: 0 0 15px rgba(0,123,255,0.6); }
 }
 
 .refit-btn:hover {

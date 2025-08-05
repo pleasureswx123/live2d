@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live2D 3D 效果演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .demo-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .demo-canvas {
+            width: 300px;
+            height: 300px;
+            background: #fff;
+            border-radius: 15px;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4em;
+            cursor: grab;
+            transition: transform 0.3s ease;
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .demo-canvas:active {
+            cursor: grabbing;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .control-group h3 {
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .control-item {
+            margin-bottom: 15px;
+        }
+
+        .control-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .control-item input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.3);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-item input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn.active {
+            background: #28a745;
+        }
+
+        .info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .value-display {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .demo-canvas {
+                width: 250px;
+                height: 250px;
+                font-size: 3em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 Live2D 3D 效果演示</h1>
+        <p>体验 CSS 3D 变换带来的伪 3D 效果</p>
+    </div>
+
+    <div class="demo-container">
+        <div class="demo-canvas" id="demoCanvas">
+            🦊
+        </div>
+
+        <div class="buttons">
+            <button class="btn" id="toggleBtn">🟢 启用 3D</button>
+            <button class="btn" onclick="resetTransform()">🔄 重置</button>
+            <button class="btn" onclick="applyPreset('left')">⬅️ 左侧</button>
+            <button class="btn" onclick="applyPreset('right')">➡️ 右侧</button>
+            <button class="btn" onclick="applyPreset('top')">⬆️ 俯视</button>
+            <button class="btn" onclick="toggleAutoRotate()" id="autoRotateBtn">🔄 自动旋转</button>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>🔄 旋转控制</h3>
+                <div class="control-item">
+                    <label>X 轴旋转: <span class="value-display" id="rotXValue">0°</span></label>
+                    <input type="range" id="rotX" min="-90" max="90" value="0" oninput="updateTransform()">
+                </div>
+                <div class="control-item">
+                    <label>Y 轴旋转: <span class="value-display" id="rotYValue">0°</span></label>
+                    <input type="range" id="rotY" min="-180" max="180" value="0" oninput="updateTransform()">
+                </div>
+                <div class="control-item">
+                    <label>Z 轴旋转: <span class="value-display" id="rotZValue">0°</span></label>
+                    <input type="range" id="rotZ" min="-180" max="180" value="0" oninput="updateTransform()">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>📐 变换控制</h3>
+                <div class="control-item">
+                    <label>透视距离: <span class="value-display" id="perspectiveValue">1000px</span></label>
+                    <input type="range" id="perspective" min="500" max="2000" value="1000" oninput="updateTransform()">
+                </div>
+                <div class="control-item">
+                    <label>Z 轴位移: <span class="value-display" id="translateZValue">0px</span></label>
+                    <input type="range" id="translateZ" min="-300" max="300" value="0" oninput="updateTransform()">
+                </div>
+                <div class="control-item">
+                    <label>3D 缩放: <span class="value-display" id="scaleValue">1.0x</span></label>
+                    <input type="range" id="scale" min="0.5" max="3" step="0.1" value="1" oninput="updateTransform()">
+                </div>
+            </div>
+        </div>
+
+        <div class="info">
+            💡 <strong>使用提示：</strong><br>
+            • 拖拽模型进行旋转 • 使用滑块精确调节 • 点击预设快速切换视角<br>
+            • 启用自动旋转观看动态效果 • 在移动设备上也能正常使用
+        </div>
+    </div>
+
+    <script>
+        let enabled = false;
+        let autoRotate = false;
+        let animationId = null;
+        let isMouseDown = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        const canvas = document.getElementById('demoCanvas');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const autoRotateBtn = document.getElementById('autoRotateBtn');
+
+        // 初始化
+        function init() {
+            setupMouseInteraction();
+            updateValueDisplays();
+        }
+
+        // 设置鼠标交互
+        function setupMouseInteraction() {
+            canvas.addEventListener('mousedown', (e) => {
+                if (!enabled) return;
+                isMouseDown = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!enabled || !isMouseDown) return;
+                
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                
+                const rotY = document.getElementById('rotY');
+                const rotX = document.getElementById('rotX');
+                
+                rotY.value = parseInt(rotY.value) + deltaX * 0.5;
+                rotX.value = parseInt(rotX.value) - deltaY * 0.5;
+                
+                // 限制范围
+                rotX.value = Math.max(-90, Math.min(90, rotX.value));
+                
+                updateTransform();
+                
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            });
+
+            document.addEventListener('mouseup', () => {
+                isMouseDown = false;
+            });
+
+            // 滚轮缩放
+            canvas.addEventListener('wheel', (e) => {
+                if (!enabled) return;
+                e.preventDefault();
+                
+                const scale = document.getElementById('scale');
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                scale.value = Math.max(0.5, Math.min(3, parseFloat(scale.value) + delta));
+                
+                updateTransform();
+            });
+        }
+
+        // 切换 3D 效果
+        function toggle3D() {
+            enabled = !enabled;
+            toggleBtn.textContent = enabled ? '🔴 禁用 3D' : '🟢 启用 3D';
+            toggleBtn.classList.toggle('active', enabled);
+            
+            if (enabled) {
+                updateTransform();
+                canvas.style.cursor = 'grab';
+            } else {
+                canvas.style.transform = '';
+                canvas.style.cursor = 'default';
+                if (autoRotate) {
+                    toggleAutoRotate();
+                }
+            }
+        }
+
+        // 更新变换
+        function updateTransform() {
+            if (!enabled) return;
+            
+            const rotX = document.getElementById('rotX').value;
+            const rotY = document.getElementById('rotY').value;
+            const rotZ = document.getElementById('rotZ').value;
+            const perspective = document.getElementById('perspective').value;
+            const translateZ = document.getElementById('translateZ').value;
+            const scale = document.getElementById('scale').value;
+            
+            const transform = `
+                perspective(${perspective}px)
+                rotateX(${rotX}deg)
+                rotateY(${rotY}deg)
+                rotateZ(${rotZ}deg)
+                translateZ(${translateZ}px)
+                scale3d(${scale}, ${scale}, ${scale})
+            `.replace(/\s+/g, ' ').trim();
+            
+            canvas.style.transform = transform;
+            updateValueDisplays();
+        }
+
+        // 更新数值显示
+        function updateValueDisplays() {
+            document.getElementById('rotXValue').textContent = document.getElementById('rotX').value + '°';
+            document.getElementById('rotYValue').textContent = document.getElementById('rotY').value + '°';
+            document.getElementById('rotZValue').textContent = document.getElementById('rotZ').value + '°';
+            document.getElementById('perspectiveValue').textContent = document.getElementById('perspective').value + 'px';
+            document.getElementById('translateZValue').textContent = document.getElementById('translateZ').value + 'px';
+            document.getElementById('scaleValue').textContent = parseFloat(document.getElementById('scale').value).toFixed(1) + 'x';
+        }
+
+        // 重置变换
+        function resetTransform() {
+            document.getElementById('rotX').value = 0;
+            document.getElementById('rotY').value = 0;
+            document.getElementById('rotZ').value = 0;
+            document.getElementById('perspective').value = 1000;
+            document.getElementById('translateZ').value = 0;
+            document.getElementById('scale').value = 1;
+            updateTransform();
+        }
+
+        // 应用预设
+        function applyPreset(preset) {
+            const presets = {
+                left: { rotX: 0, rotY: -45, rotZ: 0 },
+                right: { rotX: 0, rotY: 45, rotZ: 0 },
+                top: { rotX: -30, rotY: 0, rotZ: 0 }
+            };
+            
+            if (presets[preset]) {
+                const p = presets[preset];
+                document.getElementById('rotX').value = p.rotX;
+                document.getElementById('rotY').value = p.rotY;
+                document.getElementById('rotZ').value = p.rotZ;
+                updateTransform();
+            }
+        }
+
+        // 切换自动旋转
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            autoRotateBtn.textContent = autoRotate ? '⏸️ 停止旋转' : '🔄 自动旋转';
+            autoRotateBtn.classList.toggle('active', autoRotate);
+            
+            if (autoRotate && enabled) {
+                startAutoRotation();
+            } else {
+                stopAutoRotation();
+            }
+        }
+
+        // 开始自动旋转
+        function startAutoRotation() {
+            const animate = () => {
+                if (autoRotate && enabled) {
+                    const rotY = document.getElementById('rotY');
+                    rotY.value = (parseInt(rotY.value) + 1) % 360;
+                    updateTransform();
+                    animationId = requestAnimationFrame(animate);
+                }
+            };
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // 停止自动旋转
+        function stopAutoRotation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        // 绑定事件
+        toggleBtn.addEventListener('click', toggle3D);
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>
